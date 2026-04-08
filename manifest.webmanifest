@@ -1,7 +1,9 @@
 {
-  "name": "Daily Board",
-  "short_name": "Daily",
-  "start_url": "./index.html",
+  "name": "Bom Dia Bayer",
+  "short_name": "Bom Dia",
+  "description": "Seu boletim diário com briefing, agenda, tarefas e notícias rápidas.",
+  "start_url": "./",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#e9eef4",
   "theme_color": "#101014",

@@ -2,6 +2,8 @@ const dom = {
   todayLabel: document.querySelector("#todayLabel"),
   appStatus: document.querySelector("#appStatus"),
   greetingTitle: document.querySelector("#greetingTitle"),
+  heroDate: document.querySelector("#heroDate"),
+  heroUpdate: document.querySelector("#heroUpdate"),
   briefingTitle: document.querySelector("#briefingTitle"),
   briefingTime: document.querySelector("#briefingTime"),
   briefingSummary: document.querySelector("#briefingSummary"),
@@ -28,8 +30,11 @@ const dom = {
   newsCount: document.querySelector("#newsCount"),
   calendarStatus: document.querySelector("#calendarStatus"),
   quickNews: document.querySelector("#quickNews"),
+  quickNewsHero: document.querySelector("#quickNewsHero"),
   quickAgenda: document.querySelector("#quickAgenda"),
+  quickAgendaHero: document.querySelector("#quickAgendaHero"),
   quickTasks: document.querySelector("#quickTasks"),
+  quickTasksHero: document.querySelector("#quickTasksHero"),
   quickAudio: document.querySelector("#quickAudio"),
   settingsPanel: document.querySelector("#settingsPanel"),
   settingsForm: document.querySelector("#settingsForm"),
@@ -177,6 +182,8 @@ function render(data) {
 
   dom.greetingTitle.textContent = `${greeting}, ${ownerName}`;
   dom.todayLabel.textContent = displayDate(day.dateKey, timeZone);
+  dom.heroDate.textContent = displayDate(day.dateKey, timeZone);
+  dom.heroUpdate.textContent = `Último boletim ${displayTime(day.generatedAt, timeZone)}`;
   dom.briefingTitle.textContent = `${displayDate(day.dateKey, timeZone)} · ${displayTime(day.generatedAt, timeZone)}`;
   dom.briefingTime.textContent = `último ${displayTime(day.generatedAt, timeZone)}`;
   dom.briefingSummary.textContent = `${day.news.length} notícias curadas · Brasil, Mundo, China e Tech · último boletim às ${displayTime(day.generatedAt, timeZone)}.`;
@@ -184,8 +191,11 @@ function render(data) {
   dom.newsCount.textContent = `${day.news.length}`;
   dom.calendarStatus.textContent = data.calendarEnabled ? "iCal" : "manual";
   dom.quickNews.textContent = day.news.length;
+  dom.quickNewsHero.textContent = day.news.length;
   dom.quickAgenda.textContent = day.agenda.length;
+  dom.quickAgendaHero.textContent = day.agenda.length;
   dom.quickTasks.textContent = day.tasks.filter((task) => !task.done).length;
+  dom.quickTasksHero.textContent = day.tasks.filter((task) => !task.done).length;
   dom.quickAudio.textContent = audioUrl ? "IA" : "Web";
 
   dom.audioPlayer.hidden = !audioUrl;
