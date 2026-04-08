@@ -11,6 +11,12 @@ cd /Users/oto/Documents/Codex/daily-board
 npm start
 ```
 
+Para expor temporariamente na internet, rode com senha:
+
+```bash
+APP_USER=oto APP_PASSWORD="uma-senha-forte" npm start
+```
+
 Abra:
 
 ```text
@@ -130,6 +136,17 @@ Railway detecta o `Dockerfile`. Configure:
 - `TTS_RESPONSE_FORMAT=mp3`
 
 Use um volume persistente montado em `/data`.
+
+## MVP gratis com link temporario
+
+Para testar sem pagar deploy, rode o app no Mac e exponha com Cloudflare Tunnel:
+
+```bash
+APP_USER=oto APP_PASSWORD="uma-senha-forte" npm start
+cloudflared tunnel --url http://localhost:4173
+```
+
+O Cloudflare vai mostrar um link publico temporario. Ao abrir, o navegador pede usuario e senha. Use o usuario e senha definidos nas variaveis acima.
 
 ## Limites atuais
 

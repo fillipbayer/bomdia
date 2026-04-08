@@ -8,6 +8,8 @@ import crypto from "node:crypto";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 4173);
 const HOST = process.env.HOST || "0.0.0.0";
+const APP_USER = process.env.APP_USER || "oto";
+const APP_PASSWORD = process.env.APP_PASSWORD || "";
 const DATA_DIR = process.env.DATA_DIR || join(__dirname, "data");
 const STORE_PATH = process.env.STORE_PATH || join(DATA_DIR, "store.json");
 const AUDIO_DIR = process.env.AUDIO_DIR || join(DATA_DIR, "audio");
@@ -526,6 +528,28 @@ function sendText(response, text, status = 200) {
   response.end(text);
 }
 
+function isAuthorized(request) {
+  if (!APP_PASSWORD) return true;
+
+  const auth = request.headers.authorization || "";
+  if (!auth.startsWith("Basic ")) return false;
+
+  try {
+    const [user, password] = Buffer.from(auth.slice("Basic ".length), "base64").toString("utf8").split(":");
+    return user === APP_USER && password === APP_PASSWORD;
+  } catch {
+    return false;
+  }
+}
+
+function requestAuth(response) {
+  response.writeHead(401, {
+    "content-type": "text/plain; charset=utf-8",
+    "www-authenticate": 'Basic realm="Daily Board"'
+  });
+  response.end("Authentication required");
+}
+
 async function serveStatic(request, response, pathname) {
   const relativePath = pathname === "/" ? "index.html" : decodeURIComponent(pathname.slice(1));
   const filePath = normalize(join(__dirname, relativePath));
@@ -622,6 +646,11 @@ async function handleApi(request, response, url) {
 const server = createServer(async (request, response) => {
   try {
     const url = new URL(request.url, `http://${request.headers.host}`);
+
+    if (url.pathname !== "/api/health" && !isAuthorized(request)) {
+      requestAuth(response);
+      return;
+    }
 
     if (url.pathname.startsWith("/api/")) {
       await handleApi(request, response, url);
