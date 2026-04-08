@@ -308,7 +308,7 @@ function cleanStorySummary(item) {
   const title = cleanStoryTitle(item);
   const summary = stripHtml(item.summary)
     .replace(new RegExp(`\\s+${escapeRegExp(item.source || "")}$`, "i"), "")
-    .replace(title, "")
+    .replace(new RegExp(escapeRegExp(title), "ig"), "")
     .replace(/\s+/g, " ")
     .trim();
   return summary;
@@ -316,6 +316,103 @@ function cleanStorySummary(item) {
 
 function escapeRegExp(value) {
   return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function normalizeText(value = "") {
+  return stripHtml(value)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function wordsOverlapRatio(left, right) {
+  const leftWords = new Set(normalizeText(left).split(" ").filter((word) => word.length > 2));
+  const rightWords = normalizeText(right).split(" ").filter((word) => word.length > 2);
+  if (!leftWords.size || !rightWords.length) return 0;
+  const overlap = rightWords.filter((word) => leftWords.has(word)).length;
+  return overlap / Math.max(1, rightWords.length);
+}
+
+function needsArticleSummary(item) {
+  const title = cleanStoryTitle(item);
+  const summary = cleanStorySummary(item);
+  if (!summary) return true;
+  if (summary.length < 70) return true;
+  if (isGenericSummary(summary)) return true;
+  return wordsOverlapRatio(title, summary) > 0.72;
+}
+
+function isGenericSummary(summary = "") {
+  const normalized = normalizeText(summary);
+  return [
+    "comprehensive up to date news coverage aggregated from sources all over the world by google news",
+    "sem resumo no feed abra a fonte para ler o contexto completo"
+  ].some((text) => normalized === text);
+}
+
+function extractMetaContent(html, attribute, value) {
+  const pattern = new RegExp(`<meta\\s+[^>]*${attribute}=["']${escapeRegExp(value)}["'][^>]*content=["']([^"']+)["'][^>]*>`, "i");
+  const reversePattern = new RegExp(`<meta\\s+[^>]*content=["']([^"']+)["'][^>]*${attribute}=["']${escapeRegExp(value)}["'][^>]*>`, "i");
+  return decodeEntities(html.match(pattern)?.[1] || html.match(reversePattern)?.[1] || "");
+}
+
+function articleSummaryFromHtml(html, item) {
+  const candidates = [
+    extractMetaContent(html, "property", "og:description"),
+    extractMetaContent(html, "name", "description"),
+    extractMetaContent(html, "name", "twitter:description")
+  ].map((value) => stripHtml(value)).filter(Boolean);
+
+  if (!candidates.length) {
+    const paragraphMatches = [...html.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)]
+      .map((match) => stripHtml(match[1]))
+      .filter((text) => text.length >= 80);
+    candidates.push(...paragraphMatches.slice(0, 3));
+  }
+
+  const title = cleanStoryTitle(item);
+  const usable = candidates.find((candidate) => {
+    const cleaned = candidate.replace(/\s+/g, " ").trim();
+    return cleaned && !isGenericSummary(cleaned) && wordsOverlapRatio(title, cleaned) < 0.9;
+  });
+
+  return usable ? usable.slice(0, 240).trim() : "";
+}
+
+function sentenceCase(value) {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function fallbackSummaryFromTitle(item) {
+  const cleanedTitle = cleanStoryTitle(item).replace(/[“”"]/g, "").trim();
+  if (!cleanedTitle) return "Resumo rápido indisponível para esta notícia.";
+
+  const base = cleanedTitle
+    .replace(/\s*:\s*/g, ": ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const lower = base.charAt(0).toLowerCase() + base.slice(1);
+
+  if (base.includes(":")) {
+    const [lead, tail] = base.split(/:\s+/, 2);
+    if (tail) return sentenceCase(`${lead} em foco: ${tail}.`);
+  }
+
+  if (/\bdiz\b|\bafirma\b|\bdeclara\b|\bresponde\b/i.test(base)) {
+    return sentenceCase(`A notícia destaca a fala e o contexto por trás de que ${lower}.`);
+  }
+
+  if (/\bespera\b|\bdeve\b|\bvai\b|\banuncia\b|\bplaneja\b/i.test(base)) {
+    return sentenceCase(`A atualização aponta o próximo movimento: ${lower}.`);
+  }
+
+  return sentenceCase(`Em resumo, a matéria mostra que ${lower}.`);
 }
 
 function tagValue(block, tag) {
@@ -377,6 +474,29 @@ async function fetchFeed(feed) {
   return parseFeed(await response.text(), feed.category);
 }
 
+async function enrichStorySummary(item) {
+  if (!item.url || !needsArticleSummary(item)) return item;
+
+  try {
+    const response = await fetch(item.url, {
+      signal: AbortSignal.timeout(8000),
+      headers: {
+        "user-agent": "DailyBoard/0.2",
+        accept: "text/html,application/xhtml+xml"
+      }
+    });
+
+    if (!response.ok) return item;
+
+    const html = await response.text();
+    const articleSummary = articleSummaryFromHtml(html, item);
+    if (!articleSummary) return { ...item, summary: fallbackSummaryFromTitle(item) };
+    return { ...item, summary: articleSummary };
+  } catch {
+    return { ...item, summary: fallbackSummaryFromTitle(item) };
+  }
+}
+
 async function getNews(config, force = false) {
   if (!force && Date.now() < newsCache.expiresAt) return newsCache;
 
@@ -394,9 +514,11 @@ async function getNews(config, force = false) {
       .slice(0, 3));
   }
 
+  const enriched = await Promise.all(grouped.map(enrichStorySummary));
+
   newsCache = {
     expiresAt: Date.now() + 15 * 60 * 1000,
-    items: grouped,
+    items: enriched,
     online
   };
 
