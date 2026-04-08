@@ -3,8 +3,8 @@
   "short_name": "Daily",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#dce5ed",
-  "theme_color": "#07111e",
+  "background_color": "#e9eef4",
+  "theme_color": "#101014",
   "icons": [
     {
       "src": "./icons/icon.svg",

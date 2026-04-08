@@ -3,117 +3,132 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#07111e">
+    <meta name="theme-color" content="#101014">
     <title>Daily Board</title>
     <link rel="manifest" href="./manifest.webmanifest">
     <link rel="stylesheet" href="./styles.css">
   </head>
   <body>
     <div class="app-shell">
-      <header class="topbar">
+      <nav class="topbar" aria-label="Navegação principal">
         <div class="brand-lockup">
-          <span class="brand-mark">D</span>
+          <span class="brand-mark" aria-hidden="true">B</span>
           <div>
-            <p class="eyebrow">Daily Board</p>
-            <h1>Seu dia, em foco.</h1>
-            <p id="todayLabel" class="muted"></p>
+            <p class="eyebrow">Bom dia</p>
+            <h1 id="greetingTitle">Exploring Minds</h1>
           </div>
         </div>
         <div class="topbar-actions">
-          <span id="appStatus" class="status-pill">iniciando</span>
-          <button id="installButton" class="ghost-button" hidden>Instalar</button>
-          <button id="refreshButton" class="ghost-button">Atualizar</button>
-          <button id="generateButton" class="primary-button">Boletim agora</button>
+          <span id="todayLabel" class="status-chip"></span>
+          <span id="appStatus" class="status-chip">iniciando</span>
+          <button id="installButton" class="icon-button" type="button" hidden aria-label="Instalar">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v11m0 0 4-4m-4 4-4-4M5 19h14"/></svg>
+          </button>
+          <button id="refreshButton" class="icon-button" type="button" aria-label="Atualizar">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M20 12a8 8 0 1 1-2.3-5.7M20 4v6h-6"/></svg>
+          </button>
+          <button id="settingsButton" class="icon-button" type="button" aria-label="Configurações">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M19 12a7 7 0 0 0-.1-1l2-1.5-2-3.4-2.4 1a7 7 0 0 0-1.8-1L12.4 3h-4l-.4 3.1a7 7 0 0 0-1.8 1l-2.4-1-2 3.4 2 1.5a7 7 0 0 0 0 2l-2 1.5 2 3.4 2.4-1a7 7 0 0 0 1.8 1l.4 3.1h4l.4-3.1a7 7 0 0 0 1.8-1l2.4 1 2-3.4-2-1.5c.1-.3.1-.7.1-1Z"/></svg>
+          </button>
         </div>
-      </header>
+      </nav>
 
-      <main>
-        <section class="briefing-hero" aria-labelledby="briefingTitle">
-          <div class="briefing-copy">
-            <p class="eyebrow">Boletim principal</p>
-            <h2 id="briefingTitle">O que importa agora</h2>
+      <main class="dashboard">
+        <section class="hero-card" aria-labelledby="briefingTitle">
+          <div class="hero-copy">
+            <p class="eyebrow">Daily briefing</p>
+            <h2 id="briefingTitle">Becoming</h2>
             <p id="briefingSummary" class="briefing-summary"></p>
-            <div class="hero-meta">
-              <span id="briefingTime" class="status-pill"></span>
-              <span id="newsCount" class="status-pill"></span>
-              <span id="calendarStatus" class="status-pill">manual</span>
+            <div class="hero-actions">
+              <button id="generateButton" class="primary-button" type="button">
+                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 12h13M13 6l6 6-6 6"/></svg>
+                <span>Gerar boletim</span>
+              </button>
+              <button id="playButton" class="soft-button" type="button">
+                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M8 5v14l11-7Z"/></svg>
+                <span>Ouvir</span>
+              </button>
+              <button id="stopButton" class="icon-button light" type="button" aria-label="Parar áudio">
+                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 7h10v10H7Z"/></svg>
+              </button>
             </div>
           </div>
 
-          <aside class="podcast-card" aria-label="Podcast do boletim">
-            <div class="podcast-visual" aria-hidden="true">
-              <span></span>
-              <span></span>
-              <span></span>
-              <span></span>
-              <span></span>
+          <aside class="word-spotlight" aria-labelledby="wordsTitle">
+            <div class="spotlight-topline">
+              <p class="eyebrow">Word in use</p>
+              <button class="icon-button light" type="button" aria-label="Ouvir palavra">
+                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 9v6h4l5 4V5L9 9H5Z"/><path d="M17 9.5a4 4 0 0 1 0 5"/></svg>
+              </button>
             </div>
-            <div>
-              <p class="eyebrow">Podcast IA</p>
-              <h3 id="audioTitle">Daily em áudio</h3>
-              <p id="audioHint">Gere MP3 com voz neural configurando TTS. Sem chave, uso voz do navegador.</p>
-            </div>
-            <div class="audio-controls">
-              <button id="playButton" class="primary-button">Ouvir</button>
-              <button id="stopButton" class="ghost-button">Parar</button>
-            </div>
-            <audio id="audioPlayer" controls hidden></audio>
+            <h3 id="wordsTitle">Palavras</h3>
+            <div id="wordsBoard" class="word-grid"></div>
           </aside>
         </section>
 
-        <section class="quick-grid" aria-label="Resumo rapido">
-          <article class="quick-tile">
-            <span>Notícias</span>
-            <strong id="quickNews">0</strong>
+        <section class="dock-panel" aria-label="Ações rápidas">
+          <article class="dock-item">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h10"/></svg>
+            <span id="quickNews">0</span>
+            <small>news</small>
           </article>
-          <article class="quick-tile">
-            <span>Agenda</span>
-            <strong id="quickAgenda">0</strong>
+          <article class="dock-item">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M8 3v4m8-4v4M4 9h16M6 5h12a2 2 0 0 1 2 2v12H4V7a2 2 0 0 1 2-2Z"/></svg>
+            <span id="quickAgenda">0</span>
+            <small>agenda</small>
           </article>
-          <article class="quick-tile">
-            <span>Tarefas abertas</span>
-            <strong id="quickTasks">0</strong>
+          <article class="dock-item">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></svg>
+            <span id="quickTasks">0</span>
+            <small>tasks</small>
           </article>
-          <article class="quick-tile">
-            <span>Áudio</span>
-            <strong id="quickAudio">Browser</strong>
+          <article class="dock-item">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 18V6m4 12V9m4 9V4m4 14v-6m4 6V8"/></svg>
+            <span id="quickAudio">Browser</span>
+            <small>audio</small>
           </article>
         </section>
 
-        <section class="workbench">
-          <section class="panel news-panel" aria-labelledby="newsTitle">
+        <section class="content-grid">
+          <section class="panel feed-panel" aria-labelledby="newsTitle">
             <div class="panel-heading">
               <div>
-                <p class="eyebrow">Feed curado</p>
-                <h2 id="newsTitle">Notícias para acompanhar</h2>
+                <p class="eyebrow">Curated feed</p>
+                <h2 id="newsTitle">Radar do dia</h2>
               </div>
+              <span id="newsCount" class="status-chip"></span>
             </div>
             <div id="newsBoard" class="news-board"></div>
           </section>
 
-          <aside class="side-rail">
+          <aside class="right-rail">
+            <section class="panel audio-panel" aria-label="Podcast">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Podcast</p>
+                  <h2 id="audioTitle">Gerar podcast</h2>
+                </div>
+                <span id="briefingTime" class="status-chip"></span>
+              </div>
+              <div class="waveform" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+              <p id="audioHint"></p>
+              <audio id="audioPlayer" controls hidden></audio>
+            </section>
+
             <section class="panel focus-panel" aria-labelledby="focusTitle">
               <div class="panel-heading">
                 <div>
-                  <p class="eyebrow">Agenda e execução</p>
-                  <h2 id="focusTitle">Hoje</h2>
+                  <p class="eyebrow">Today</p>
+                  <h2 id="focusTitle">Agenda</h2>
                 </div>
+                <span id="calendarStatus" class="status-chip">manual</span>
               </div>
               <ul id="agendaList" class="stack-list"></ul>
-              <form id="taskForm" class="inline-form">
-                <input id="taskInput" type="text" placeholder="Adicionar tarefa" aria-label="Adicionar tarefa">
-                <button class="ghost-button" type="submit">Adicionar</button>
+              <form id="taskForm" class="ask-bar">
+                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3V7a4 4 0 0 1 4-4h10a4 4 0 0 1 4 4Z"/></svg>
+                <input id="taskInput" type="text" placeholder="Nova tarefa..." aria-label="Adicionar tarefa">
+                <button type="submit">Add</button>
               </form>
-            </section>
-
-            <section class="panel" aria-labelledby="wordsTitle">
-              <div class="panel-heading">
-                <div>
-                  <p class="eyebrow">Estudo rápido</p>
-                  <h2 id="wordsTitle">Palavras do dia</h2>
-                </div>
-              </div>
-              <div id="wordsBoard" class="word-grid"></div>
             </section>
           </aside>
         </section>
@@ -121,8 +136,8 @@
         <section class="panel script-panel" aria-labelledby="scriptTitle">
           <div class="panel-heading">
             <div>
-              <p class="eyebrow">Roteiro</p>
-              <h2 id="scriptTitle">Texto do boletim</h2>
+              <p class="eyebrow">Script</p>
+              <h2 id="scriptTitle">Roteiro do boletim</h2>
             </div>
           </div>
           <p id="briefingScript"></p>
@@ -131,7 +146,7 @@
         <section class="panel history-panel" aria-labelledby="historyTitle">
           <div class="panel-heading">
             <div>
-              <p class="eyebrow">Arquivo</p>
+              <p class="eyebrow">Archive</p>
               <h2 id="historyTitle">Dias salvos</h2>
             </div>
           </div>
@@ -139,6 +154,63 @@
         </section>
       </main>
     </div>
+
+    <section id="settingsPanel" class="settings-shell" aria-labelledby="settingsTitle" hidden>
+      <div class="settings-backdrop" data-settings-close></div>
+      <aside class="settings-card" aria-modal="true" role="dialog">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Control center</p>
+            <h2 id="settingsTitle">Configurações</h2>
+          </div>
+          <button class="icon-button light" type="button" data-settings-close aria-label="Fechar configurações">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg>
+          </button>
+        </div>
+
+        <form id="settingsForm" class="settings-form">
+          <label>
+            <span>Nome</span>
+            <input id="settingOwnerName" name="ownerName" type="text" placeholder="Oto">
+          </label>
+          <label>
+            <span>Timezone</span>
+            <input id="settingTimezone" name="timezone" type="text" placeholder="America/Sao_Paulo">
+          </label>
+          <label>
+            <span>Agenda iCal</span>
+            <input id="settingIcalUrl" name="icalUrl" type="url" placeholder="https://.../calendar.ics">
+          </label>
+          <label>
+            <span>Assuntos</span>
+            <textarea id="settingInterests" name="interests" rows="4" placeholder="inteligência artificial, economia, cinema, futebol"></textarea>
+          </label>
+          <label>
+            <span>Fontes RSS</span>
+            <textarea id="settingFeeds" name="feeds" rows="7" placeholder="Tecnologia | https://example.com/rss"></textarea>
+          </label>
+          <div class="settings-row">
+            <label>
+              <span>Hora</span>
+              <input id="settingMorningHour" name="morningHour" type="number" min="0" max="23">
+            </label>
+            <label>
+              <span>Minuto</span>
+              <input id="settingMorningMinute" name="morningMinute" type="number" min="0" max="59">
+            </label>
+          </div>
+          <label>
+            <span>Voz</span>
+            <input id="settingVoice" name="voice" type="text" placeholder="marin">
+          </label>
+          <button class="primary-button" type="submit">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m5 13 4 4L19 7"/></svg>
+            <span>Salvar</span>
+          </button>
+          <p id="settingsStatus" class="settings-status"></p>
+        </form>
+      </aside>
+    </section>
 
     <script src="./app.js" type="module"></script>
   </body>

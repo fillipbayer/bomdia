@@ -63,10 +63,7 @@ async function writeJson(path, value) {
   await writeFile(path, JSON.stringify(value, null, 2));
 }
 
-async function loadConfig() {
-  const example = await readJson(CONFIG_EXAMPLE_PATH, {});
-  const local = await readJson(CONFIG_PATH, {});
-  const envConfig = configFromEnv();
+function mergeConfig(example, local, envConfig) {
   return {
     ...example,
     ...local,
@@ -80,8 +77,20 @@ async function loadConfig() {
       ...(example.tts || {}),
       ...(local.tts || {}),
       ...(envConfig.tts || {})
+    },
+    morningBriefing: {
+      ...(example.morningBriefing || {}),
+      ...(local.morningBriefing || {}),
+      ...(envConfig.morningBriefing || {})
     }
   };
+}
+
+async function loadConfig() {
+  const example = await readJson(CONFIG_EXAMPLE_PATH, {});
+  const local = await readJson(CONFIG_PATH, {});
+  const envConfig = configFromEnv();
+  return mergeConfig(example, local, envConfig);
 }
 
 function configFromEnv() {
@@ -91,6 +100,13 @@ function configFromEnv() {
   if (process.env.TIMEZONE) config.timezone = process.env.TIMEZONE;
   if (process.env.INTERESTS) config.interests = process.env.INTERESTS.split(",").map((item) => item.trim()).filter(Boolean);
   if (process.env.ICAL_URL) config.calendar = { icalUrl: process.env.ICAL_URL };
+  if (process.env.MORNING_BRIEFING_HOUR || process.env.MORNING_BRIEFING_MINUTE) {
+    config.morningBriefing = {
+      hour: process.env.MORNING_BRIEFING_HOUR ? Number(process.env.MORNING_BRIEFING_HOUR) : undefined,
+      minute: process.env.MORNING_BRIEFING_MINUTE ? Number(process.env.MORNING_BRIEFING_MINUTE) : undefined
+    };
+    config.morningBriefing = Object.fromEntries(Object.entries(config.morningBriefing).filter(([, value]) => value !== undefined));
+  }
   if (process.env.TTS_PROVIDER || process.env.OPENAI_TTS_MODEL || process.env.OPENAI_TTS_VOICE) {
     config.tts = {
       provider: process.env.TTS_PROVIDER,
@@ -104,6 +120,67 @@ function configFromEnv() {
   }
 
   return config;
+}
+
+function publicSettings(config) {
+  return {
+    ownerName: config.ownerName || "Oto",
+    timezone: config.timezone || "America/Sao_Paulo",
+    interests: config.interests || [],
+    newsFeeds: config.newsFeeds || [],
+    calendar: {
+      icalUrl: config.calendar?.icalUrl || ""
+    },
+    morningBriefing: {
+      enabled: config.morningBriefing?.enabled !== false,
+      hour: Number(config.morningBriefing?.hour ?? 7),
+      minute: Number(config.morningBriefing?.minute ?? 0)
+    },
+    tts: {
+      provider: config.tts?.provider || "browser",
+      openaiModel: config.tts?.openaiModel || "",
+      openaiVoice: config.tts?.openaiVoice || "",
+      responseFormat: config.tts?.responseFormat || "mp3",
+      speed: Number(config.tts?.speed || 1),
+      instructions: config.tts?.instructions || ""
+    }
+  };
+}
+
+function normalizeSettings(payload, currentConfig) {
+  const settings = payload || {};
+  const interests = Array.isArray(settings.interests)
+    ? settings.interests.map((item) => String(item).trim()).filter(Boolean)
+    : String(settings.interests || "").split(",").map((item) => item.trim()).filter(Boolean);
+  const newsFeeds = Array.isArray(settings.newsFeeds)
+    ? settings.newsFeeds
+        .map((feed) => ({ category: String(feed.category || "").trim(), url: String(feed.url || "").trim() }))
+        .filter((feed) => feed.category && feed.url)
+    : currentConfig.newsFeeds || [];
+
+  return {
+    ownerName: String(settings.ownerName || currentConfig.ownerName || "Oto").trim(),
+    timezone: String(settings.timezone || currentConfig.timezone || "America/Sao_Paulo").trim(),
+    interests,
+    newsFeeds,
+    calendar: {
+      icalUrl: String(settings.calendar?.icalUrl || "").trim()
+    },
+    morningBriefing: {
+      enabled: settings.morningBriefing?.enabled !== false,
+      hour: Math.min(23, Math.max(0, Number(settings.morningBriefing?.hour ?? currentConfig.morningBriefing?.hour ?? 7))),
+      minute: Math.min(59, Math.max(0, Number(settings.morningBriefing?.minute ?? currentConfig.morningBriefing?.minute ?? 0)))
+    },
+    manualAgenda: currentConfig.manualAgenda || [],
+    tts: {
+      provider: String(settings.tts?.provider || currentConfig.tts?.provider || "openai").trim(),
+      openaiModel: String(settings.tts?.openaiModel || currentConfig.tts?.openaiModel || "gpt-4o-mini-tts").trim(),
+      openaiVoice: String(settings.tts?.openaiVoice || currentConfig.tts?.openaiVoice || "marin").trim(),
+      responseFormat: String(settings.tts?.responseFormat || currentConfig.tts?.responseFormat || "mp3").trim(),
+      speed: Number(settings.tts?.speed || currentConfig.tts?.speed || 1),
+      instructions: String(settings.tts?.instructions || currentConfig.tts?.instructions || "").trim()
+    }
+  };
 }
 
 async function loadStore() {
@@ -507,7 +584,9 @@ async function dayResponse(dateKey, forceNews = false, mode = "morning") {
     day: store.days[dateKey],
     history: historyFromStore(store),
     online,
-    calendarEnabled
+    calendarEnabled,
+    timezone: config.timezone || "America/Sao_Paulo",
+    ownerName: config.ownerName || "Oto"
   };
 }
 
@@ -591,6 +670,20 @@ async function handleApi(request, response, url) {
       calendarEnabled: Boolean(config.calendar?.icalUrl),
       dataDir: DATA_DIR
     });
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/settings") {
+    sendJson(response, publicSettings(await loadConfig()));
+    return;
+  }
+
+  if (request.method === "PUT" && url.pathname === "/api/settings") {
+    const currentConfig = await loadConfig();
+    const nextConfig = normalizeSettings(await readBody(request), currentConfig);
+    await writeJson(CONFIG_PATH, nextConfig);
+    newsCache = { expiresAt: 0, items: [], online: false };
+    sendJson(response, publicSettings(await loadConfig()));
     return;
   }
 
