@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#07111e">
+    <title>Daily Board</title>
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand-lockup">
+          <span class="brand-mark">D</span>
+          <div>
+            <p class="eyebrow">Daily Board</p>
+            <h1>Seu dia, em foco.</h1>
+            <p id="todayLabel" class="muted"></p>
+          </div>
+        </div>
+        <div class="topbar-actions">
+          <span id="appStatus" class="status-pill">iniciando</span>
+          <button id="installButton" class="ghost-button" hidden>Instalar</button>
+          <button id="refreshButton" class="ghost-button">Atualizar</button>
+          <button id="generateButton" class="primary-button">Boletim agora</button>
+        </div>
+      </header>
+
+      <main>
+        <section class="briefing-hero" aria-labelledby="briefingTitle">
+          <div class="briefing-copy">
+            <p class="eyebrow">Boletim principal</p>
+            <h2 id="briefingTitle">O que importa agora</h2>
+            <p id="briefingSummary" class="briefing-summary"></p>
+            <div class="hero-meta">
+              <span id="briefingTime" class="status-pill"></span>
+              <span id="newsCount" class="status-pill"></span>
+              <span id="calendarStatus" class="status-pill">manual</span>
+            </div>
+          </div>
+
+          <aside class="podcast-card" aria-label="Podcast do boletim">
+            <div class="podcast-visual" aria-hidden="true">
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+            <div>
+              <p class="eyebrow">Podcast IA</p>
+              <h3 id="audioTitle">Daily em áudio</h3>
+              <p id="audioHint">Gere MP3 com voz neural configurando TTS. Sem chave, uso voz do navegador.</p>
+            </div>
+            <div class="audio-controls">
+              <button id="playButton" class="primary-button">Ouvir</button>
+              <button id="stopButton" class="ghost-button">Parar</button>
+            </div>
+            <audio id="audioPlayer" controls hidden></audio>
+          </aside>
+        </section>
+
+        <section class="quick-grid" aria-label="Resumo rapido">
+          <article class="quick-tile">
+            <span>Notícias</span>
+            <strong id="quickNews">0</strong>
+          </article>
+          <article class="quick-tile">
+            <span>Agenda</span>
+            <strong id="quickAgenda">0</strong>
+          </article>
+          <article class="quick-tile">
+            <span>Tarefas abertas</span>
+            <strong id="quickTasks">0</strong>
+          </article>
+          <article class="quick-tile">
+            <span>Áudio</span>
+            <strong id="quickAudio">Browser</strong>
+          </article>
+        </section>
+
+        <section class="workbench">
+          <section class="panel news-panel" aria-labelledby="newsTitle">
+            <div class="panel-heading">
+              <div>
+                <p class="eyebrow">Feed curado</p>
+                <h2 id="newsTitle">Notícias para acompanhar</h2>
+              </div>
+            </div>
+            <div id="newsBoard" class="news-board"></div>
+          </section>
+
+          <aside class="side-rail">
+            <section class="panel focus-panel" aria-labelledby="focusTitle">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Agenda e execução</p>
+                  <h2 id="focusTitle">Hoje</h2>
+                </div>
+              </div>
+              <ul id="agendaList" class="stack-list"></ul>
+              <form id="taskForm" class="inline-form">
+                <input id="taskInput" type="text" placeholder="Adicionar tarefa" aria-label="Adicionar tarefa">
+                <button class="ghost-button" type="submit">Adicionar</button>
+              </form>
+            </section>
+
+            <section class="panel" aria-labelledby="wordsTitle">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Estudo rápido</p>
+                  <h2 id="wordsTitle">Palavras do dia</h2>
+                </div>
+              </div>
+              <div id="wordsBoard" class="word-grid"></div>
+            </section>
+          </aside>
+        </section>
+
+        <section class="panel script-panel" aria-labelledby="scriptTitle">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Roteiro</p>
+              <h2 id="scriptTitle">Texto do boletim</h2>
+            </div>
+          </div>
+          <p id="briefingScript"></p>
+        </section>
+
+        <section class="panel history-panel" aria-labelledby="historyTitle">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">Arquivo</p>
+              <h2 id="historyTitle">Dias salvos</h2>
+            </div>
+          </div>
+          <div id="historyList" class="history-list"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="./app.js" type="module"></script>
+  </body>
+</html>

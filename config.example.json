@@ -1,0 +1,62 @@
+{
+  "ownerName": "Oto",
+  "timezone": "America/Sao_Paulo",
+  "interests": [
+    "inteligencia artificial",
+    "tecnologia",
+    "cultura",
+    "esportes"
+  ],
+  "newsFeeds": [
+    {
+      "category": "Brasil",
+      "url": "https://news.google.com/rss/search?q=Brasil&hl=pt-BR&gl=BR&ceid=BR:pt-419"
+    },
+    {
+      "category": "Mundo",
+      "url": "https://news.google.com/rss/search?q=mundo&hl=pt-BR&gl=BR&ceid=BR:pt-419"
+    },
+    {
+      "category": "Tecnologia",
+      "url": "https://news.google.com/rss/search?q=tecnologia%20inteligencia%20artificial&hl=pt-BR&gl=BR&ceid=BR:pt-419"
+    },
+    {
+      "category": "Cultura",
+      "url": "https://news.google.com/rss/search?q=cultura%20livros%20cinema%20musica&hl=pt-BR&gl=BR&ceid=BR:pt-419"
+    },
+    {
+      "category": "Entretenimento",
+      "url": "https://news.google.com/rss/search?q=entretenimento%20series%20games&hl=pt-BR&gl=BR&ceid=BR:pt-419"
+    },
+    {
+      "category": "Esportes",
+      "url": "https://news.google.com/rss/search?q=esportes%20futebol&hl=pt-BR&gl=BR&ceid=BR:pt-419"
+    }
+  ],
+  "calendar": {
+    "icalUrl": ""
+  },
+  "morningBriefing": {
+    "enabled": true,
+    "hour": 7,
+    "minute": 0
+  },
+  "manualAgenda": [
+    {
+      "time": "09:00",
+      "title": "Revisar prioridades do dia"
+    },
+    {
+      "time": "18:00",
+      "title": "Gerar boletim de fim de tarde"
+    }
+  ],
+  "tts": {
+    "provider": "openai",
+    "openaiModel": "gpt-4o-mini-tts",
+    "openaiVoice": "marin",
+    "responseFormat": "mp3",
+    "speed": 1,
+    "instructions": "Fale em portugues brasileiro, como apresentador de podcast matinal premium: natural, calmo, inteligente, com pequenas pausas entre blocos, sem soar como leitura robotica."
+  }
+}

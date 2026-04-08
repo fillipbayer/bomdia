@@ -1,0 +1,15 @@
+{
+  "name": "Daily Board",
+  "short_name": "Daily",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#dce5ed",
+  "theme_color": "#07111e",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
