@@ -1,9 +1,6 @@
 const dom = {
-  todayLabel: document.querySelector("#todayLabel"),
-  appStatus: document.querySelector("#appStatus"),
   greetingTitle: document.querySelector("#greetingTitle"),
   heroDate: document.querySelector("#heroDate"),
-  heroUpdate: document.querySelector("#heroUpdate"),
   briefingTitle: document.querySelector("#briefingTitle"),
   briefingTime: document.querySelector("#briefingTime"),
   briefingSummary: document.querySelector("#briefingSummary"),
@@ -29,13 +26,6 @@ const dom = {
   historyList: document.querySelector("#historyList"),
   newsCount: document.querySelector("#newsCount"),
   calendarStatus: document.querySelector("#calendarStatus"),
-  quickNews: document.querySelector("#quickNews"),
-  quickNewsHero: document.querySelector("#quickNewsHero"),
-  quickAgenda: document.querySelector("#quickAgenda"),
-  quickAgendaHero: document.querySelector("#quickAgendaHero"),
-  quickTasks: document.querySelector("#quickTasks"),
-  quickTasksHero: document.querySelector("#quickTasksHero"),
-  quickAudio: document.querySelector("#quickAudio"),
   settingsPanel: document.querySelector("#settingsPanel"),
   settingsForm: document.querySelector("#settingsForm"),
   settingsStatus: document.querySelector("#settingsStatus"),
@@ -58,6 +48,7 @@ let currentDay;
 let currentData;
 let currentSettings;
 let speechUtterance;
+let wordUtterance;
 
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (char) => ({
@@ -85,6 +76,16 @@ function displayTime(isoDate, timeZone = "America/Sao_Paulo") {
     hour: "2-digit",
     minute: "2-digit"
   }).format(new Date(isoDate));
+}
+
+function displayLongDate(dateKey, timeZone = "America/Sao_Paulo") {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone,
+    weekday: "long",
+    day: "numeric",
+    month: "long"
+  }).format(new Date(Date.UTC(year, month - 1, day, 12)));
 }
 
 function timeGreeting(timeZone = "America/Sao_Paulo") {
@@ -115,19 +116,32 @@ function groupNews(items) {
 
 function categoryIcon(category) {
   return {
-    Brasil: "BR",
-    Mundo: "🌐",
-    China: "中",
-    Tech: "AI",
-    Cultura: "♪",
-    Esportes: "⚑"
-  }[category] || category.slice(0, 2);
+    Brasil: '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3 4 8l8 5 8-5-8-5Z"/><path d="m4 16 8 5 8-5"/><path d="m4 12 8 5 8-5"/></svg>',
+    Mundo: '<svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a15 15 0 0 1 0 18"/><path d="M12 3a15 15 0 0 0 0 18"/></svg>',
+    China: '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="m12 3 1.8 3.9L18 7.3l-3 2.9.8 4.1-3.8-2-3.8 2 .8-4.1-3-2.9 4.2-.4L12 3Z"/></svg>',
+    Tech: '<svg aria-hidden="true" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2"/><path d="M4 10h3M4 14h3M17 10h3M17 14h3M10 4v3M14 4v3M10 17v3M14 17v3"/></svg>',
+    Cultura: '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 18V6l10-2v12"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="16" r="2"/></svg>',
+    Esportes: '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 4h9l-1 5 4 2-4 2 1 7H6Z"/></svg>'
+  }[category] || '<svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/></svg>';
 }
 
 function shortSummary(value) {
   const text = String(value || "").replace(/\s+/g, " ").trim();
-  if (text.length <= 150) return text;
-  return `${text.slice(0, 147).trim()}...`;
+  if (text.length <= 110) return text;
+  return `${text.slice(0, 107).trim()}...`;
+}
+
+function heroDigest(day) {
+  const grouped = groupNews(day.news);
+  const highlights = grouped
+    .map((group) => {
+      const first = group.items[0];
+      if (!first) return "";
+      return `${group.category}: ${shortSummary(first.summary || first.title)}`;
+    })
+    .filter(Boolean)
+    .slice(0, 3);
+  return highlights.join(" ");
 }
 
 function formatDuration(value) {
@@ -153,8 +167,7 @@ async function api(path, options = {}) {
 }
 
 function setStatus(text, isError = false) {
-  dom.appStatus.textContent = text;
-  dom.appStatus.classList.toggle("is-error", isError);
+  document.body.dataset.status = isError ? "error" : text.toLowerCase();
 }
 
 async function loadDay(dateKey = currentDay) {
@@ -181,22 +194,13 @@ function render(data) {
   const ownerName = data.ownerName || "Bayer";
 
   dom.greetingTitle.textContent = `${greeting}, ${ownerName}`;
-  dom.todayLabel.textContent = displayDate(day.dateKey, timeZone);
   dom.heroDate.textContent = displayDate(day.dateKey, timeZone);
-  dom.heroUpdate.textContent = `Último boletim ${displayTime(day.generatedAt, timeZone)}`;
-  dom.briefingTitle.textContent = `${displayDate(day.dateKey, timeZone)} · ${displayTime(day.generatedAt, timeZone)}`;
+  dom.briefingTitle.textContent = displayLongDate(day.dateKey, timeZone);
   dom.briefingTime.textContent = `último ${displayTime(day.generatedAt, timeZone)}`;
-  dom.briefingSummary.textContent = `${day.news.length} notícias curadas · Brasil, Mundo, China e Tech · último boletim às ${displayTime(day.generatedAt, timeZone)}.`;
+  dom.briefingSummary.textContent = heroDigest(day) || `Resumo do dia atualizado às ${displayTime(day.generatedAt, timeZone)}.`;
   dom.briefingScript.textContent = day.script;
   dom.newsCount.textContent = `${day.news.length}`;
   dom.calendarStatus.textContent = data.calendarEnabled ? "iCal" : "manual";
-  dom.quickNews.textContent = day.news.length;
-  dom.quickNewsHero.textContent = day.news.length;
-  dom.quickAgenda.textContent = day.agenda.length;
-  dom.quickAgendaHero.textContent = day.agenda.length;
-  dom.quickTasks.textContent = day.tasks.filter((task) => !task.done).length;
-  dom.quickTasksHero.textContent = day.tasks.filter((task) => !task.done).length;
-  dom.quickAudio.textContent = audioUrl ? "IA" : "Web";
 
   dom.audioPlayer.hidden = !audioUrl;
   if (audioUrl) {
@@ -218,7 +222,7 @@ function render(data) {
       <div class="news-group-list">
         ${group.items.map((item, index) => `
           <article class="news-item ${index === 0 ? "is-featured" : ""}">
-            <div class="news-icon news-${escapeHtml(group.category.toLowerCase())}" aria-hidden="true">${escapeHtml(categoryIcon(group.category))}</div>
+            <div class="news-icon news-${escapeHtml(group.category.toLowerCase())}" aria-hidden="true">${categoryIcon(group.category)}</div>
             <div class="news-copy">
               <div class="news-meta">
                 <span class="category">${escapeHtml(item.source || "RSS")}</span>
@@ -236,12 +240,23 @@ function render(data) {
 
   dom.wordsBoard.innerHTML = `
     <article class="word-card">
-      <span class="category">English</span>
+      <div class="word-card-top">
+        <span class="category">English</span>
+        <button class="word-audio-button" type="button" data-word-text="${escapeHtml(day.words.english.word)}" data-word-lang="en-US" aria-label="Ouvir palavra em inglês">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 10v4h4l5 4V6l-5 4Z"/><path d="M17 9.5a4 4 0 0 1 0 5"/></svg>
+        </button>
+      </div>
       <strong>${escapeHtml(day.words.english.word)}</strong>
+      <p>${escapeHtml(day.words.english.pronunciation || "")}</p>
       <p>${escapeHtml(day.words.english.meaning)}</p>
     </article>
     <article class="word-card">
-      <span class="category">Mandarin</span>
+      <div class="word-card-top">
+        <span class="category">Mandarin</span>
+        <button class="word-audio-button" type="button" data-word-text="${escapeHtml(day.words.mandarin.word)}" data-word-lang="zh-CN" aria-label="Ouvir palavra em mandarim">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 10v4h4l5 4V6l-5 4Z"/><path d="M17 9.5a4 4 0 0 1 0 5"/></svg>
+        </button>
+      </div>
       <strong>${escapeHtml(day.words.mandarin.word)}</strong>
       <p>${escapeHtml(day.words.mandarin.pinyin)} · ${escapeHtml(day.words.mandarin.meaning)}</p>
     </article>
@@ -378,6 +393,15 @@ async function speakBriefing() {
   window.speechSynthesis.speak(speechUtterance);
 }
 
+function speakWord(text, lang) {
+  if (!("speechSynthesis" in window) || !text) return;
+  window.speechSynthesis.cancel();
+  wordUtterance = new SpeechSynthesisUtterance(text);
+  wordUtterance.lang = lang;
+  wordUtterance.rate = lang === "zh-CN" ? 0.82 : 0.92;
+  window.speechSynthesis.speak(wordUtterance);
+}
+
 function stopAudio() {
   window.speechSynthesis?.cancel();
   dom.audioPlayer.pause();
@@ -412,6 +436,7 @@ async function addTask(event) {
 async function handleListClick(event) {
   const taskButton = event.target.closest("[data-task-id]");
   const historyButton = event.target.closest("[data-day]");
+  const wordButton = event.target.closest("[data-word-text]");
 
   if (taskButton) {
     await api(`/api/tasks/${encodeURIComponent(taskButton.dataset.taskId)}`, {
@@ -423,6 +448,10 @@ async function handleListClick(event) {
 
   if (historyButton) {
     await loadDay(historyButton.dataset.day);
+  }
+
+  if (wordButton) {
+    speakWord(wordButton.dataset.wordText, wordButton.dataset.wordLang || "en-US");
   }
 }
 
@@ -493,6 +522,7 @@ dom.settingsForm.addEventListener("submit", (event) => saveSettings(event).catch
 dom.settingsPanel.addEventListener("click", (event) => {
   if (event.target.closest("[data-settings-close]")) closeSettings();
 });
+dom.wordsBoard.addEventListener("click", (event) => handleListClick(event).catch(handleError));
 dom.taskForm.addEventListener("submit", (event) => addTask(event).catch(handleError));
 dom.agendaList.addEventListener("click", (event) => handleListClick(event).catch(handleError));
 dom.historyList.addEventListener("click", (event) => handleListClick(event).catch(handleError));

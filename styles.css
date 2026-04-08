@@ -144,12 +144,6 @@ a {
   white-space: nowrap;
 }
 
-.status-chip.is-error {
-  color: #ffffff;
-  background: #9b2d2d;
-  border-color: #9b2d2d;
-}
-
 .icon-button,
 .primary-button,
 .soft-button {
@@ -170,6 +164,10 @@ a {
 }
 
 .icon-button.light {
+  background: #ffffff;
+}
+
+.topbar-actions .icon-button {
   background: #ffffff;
 }
 
@@ -216,7 +214,7 @@ a {
 
 .hero-topline {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .hero-meta {
@@ -240,63 +238,21 @@ a {
 
 .hero-card h2 {
   max-width: 660px;
-  font-size: 52px;
-  font-weight: 760;
-  line-height: 0.98;
-}
-
-.briefing-summary {
-  max-width: 650px;
-  margin: 20px 0 22px;
-  color: #3f3c46;
-  font-size: 17px;
-  line-height: 1.55;
-}
-
-.hero-glance {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 16px;
-}
-
-.glance-item {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 10px;
-  align-items: center;
-  min-width: 0;
-  padding: 12px;
-  background: rgb(255 255 255 / 72%);
-  border: 1px solid rgb(255 255 255 / 85%);
-  border-radius: var(--radius);
-}
-
-.glance-item svg {
-  color: rgb(23 21 26 / 72%);
-}
-
-.glance-item strong,
-.glance-item span {
-  display: block;
-}
-
-.glance-item strong {
-  font-size: 20px;
-  font-weight: 760;
+  font-size: 46px;
+  font-weight: 740;
   line-height: 1;
 }
 
-.glance-item span {
-  margin-top: 3px;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 700;
+.briefing-summary {
+  max-width: 700px;
+  margin: 18px 0 0;
+  color: #3f3c46;
+  font-size: 18px;
+  line-height: 1.6;
 }
 
 .word-spotlight,
-.panel,
-.dock-panel {
+.panel {
   background: rgb(255 255 255 / 90%);
   border: 1px solid rgb(255 255 255 / 85%);
   border-radius: var(--radius);
@@ -338,6 +294,24 @@ a {
   border-radius: var(--radius);
 }
 
+.word-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.word-audio-button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  color: var(--ink);
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
 .word-card strong {
   display: block;
   margin: 6px 0;
@@ -347,7 +321,7 @@ a {
 }
 
 .word-card p {
-  margin: 0;
+  margin: 4px 0 0;
   color: var(--muted);
   line-height: 1.45;
 }
@@ -358,43 +332,6 @@ a {
   font-size: 11px;
   font-weight: 800;
   text-transform: uppercase;
-}
-
-.dock-panel {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  padding: 10px;
-  background: var(--dark);
-}
-
-.dock-item {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  gap: 8px 10px;
-  min-width: 0;
-  padding: 12px;
-  color: #ffffff;
-  background: #25222a;
-  border: 1px solid #36313b;
-  border-radius: var(--radius);
-}
-
-.dock-item span {
-  overflow: hidden;
-  font-size: 22px;
-  font-weight: 760;
-  line-height: 1;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dock-item small {
-  grid-column: 2;
-  color: #bdb8c7;
-  font-size: 12px;
-  font-weight: 800;
 }
 
 .content-grid {
@@ -486,9 +423,11 @@ a {
   place-items: center;
   color: var(--dark);
   border-radius: var(--radius);
-  font-size: 15px;
-  font-weight: 900;
-  text-transform: uppercase;
+}
+
+.news-icon svg {
+  width: 18px;
+  height: 18px;
 }
 
 .news-brasil {
@@ -533,7 +472,7 @@ a {
 #audioHint {
   margin: 0;
   color: var(--muted);
-  line-height: 1.55;
+  line-height: 1.5;
 }
 
 .news-item a {
@@ -811,8 +750,7 @@ a {
   }
 
   .topbar .eyebrow,
-  #todayLabel,
-  #appStatus {
+  .status-chip {
     display: none;
   }
 
@@ -840,20 +778,14 @@ a {
   }
 
   .hero-card h2 {
-    font-size: 32px;
-    line-height: 1.02;
+    font-size: 30px;
+    line-height: 1.04;
   }
 
   .briefing-summary {
-    margin: 14px 0 16px;
+    margin: 12px 0 0;
     font-size: 15px;
     line-height: 1.5;
-  }
-
-  .hero-actions {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    gap: 8px;
   }
 
   .primary-button,
@@ -862,54 +794,12 @@ a {
     min-height: 42px;
   }
 
-  .hero-glance {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-  }
-
-  .glance-item {
-    grid-template-columns: 1fr;
-    gap: 8px;
-    padding: 10px;
-  }
-
-  .glance-item svg {
-    width: 18px;
-    height: 18px;
-  }
-
-  .glance-item strong {
-    font-size: 18px;
-  }
-
   .word-spotlight {
     padding: 14px;
   }
 
   .word-spotlight h3 {
     font-size: 28px;
-  }
-
-  .dock-panel {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 8px;
-    padding: 8px;
-  }
-
-  .dock-item {
-    grid-template-columns: 1fr;
-    gap: 6px;
-    justify-items: start;
-    padding: 10px;
-  }
-
-  .dock-item small {
-    grid-column: auto;
-    font-size: 11px;
-  }
-
-  .dock-item span {
-    font-size: 18px;
   }
 
   .right-rail {

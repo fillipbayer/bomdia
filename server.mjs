@@ -379,7 +379,7 @@ function articleSummaryFromHtml(html, item) {
     return cleaned && !isGenericSummary(cleaned) && wordsOverlapRatio(title, cleaned) < 0.9;
   });
 
-  return usable ? usable.slice(0, 240).trim() : "";
+  return usable ? conciseSummary(usable) : "";
 }
 
 function sentenceCase(value) {
@@ -388,31 +388,67 @@ function sentenceCase(value) {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
+function conciseSummary(value) {
+  const cleaned = stripHtml(value)
+    .replace(/\s+/g, " ")
+    .replace(/^leia também[:\s-]*/i, "")
+    .replace(/^saiba mais[:\s-]*/i, "")
+    .trim();
+
+  if (!cleaned) return "";
+
+  const firstSentence = cleaned.split(/(?<=[.!?])\s+/)[0]?.trim() || cleaned;
+  const compact = firstSentence
+    .replace(/\s+\([^)]*\)/g, "")
+    .replace(/\bsegundo [^,.]+/gi, "")
+    .replace(/\bde acordo com [^,.]+/gi, "")
+    .replace(/\s+,/g, ",")
+    .trim();
+
+  const short = compact.length > 150 ? `${compact.slice(0, 147).trim()}...` : compact;
+  return sentenceCase(short.replace(/[;:]\s*$/, "").trim());
+}
+
+function removeLeadQuote(value) {
+  return value
+    .replace(/^["“][^"”]+["”]\s*:\s*/u, "")
+    .replace(/^["“][^"”]+["”]\s*/u, "")
+    .trim();
+}
+
 function fallbackSummaryFromTitle(item) {
-  const cleanedTitle = cleanStoryTitle(item).replace(/[“”"]/g, "").trim();
+  const cleanedTitle = removeLeadQuote(cleanStoryTitle(item)).replace(/[“”"]/g, "").trim();
   if (!cleanedTitle) return "Resumo rápido indisponível para esta notícia.";
 
   const base = cleanedTitle
     .replace(/\s*:\s*/g, ": ")
+    .replace(/\s*—\s*/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 
-  const lower = base.charAt(0).toLowerCase() + base.slice(1);
-
   if (base.includes(":")) {
     const [lead, tail] = base.split(/:\s+/, 2);
-    if (tail) return sentenceCase(`${lead} em foco: ${tail}.`);
+    if (tail) return conciseSummary(`${tail}.`);
   }
 
   if (/\bdiz\b|\bafirma\b|\bdeclara\b|\bresponde\b/i.test(base)) {
-    return sentenceCase(`A notícia destaca a fala e o contexto por trás de que ${lower}.`);
+    const [statement, speaker] = base.split(/\s*,\s*diz\s+/i);
+    if (statement && speaker) return conciseSummary(`${speaker} comenta que ${statement}.`);
   }
 
-  if (/\bespera\b|\bdeve\b|\bvai\b|\banuncia\b|\bplaneja\b/i.test(base)) {
-    return sentenceCase(`A atualização aponta o próximo movimento: ${lower}.`);
+  if (/\bespera anunciar\b/i.test(base)) {
+    return conciseSummary(base.replace(/\bespera anunciar\b/i, "deve anunciar"));
   }
 
-  return sentenceCase(`Em resumo, a matéria mostra que ${lower}.`);
+  if (/\bdeve\b|\bvai\b|\banuncia\b|\bplaneja\b/i.test(base)) {
+    return conciseSummary(base);
+  }
+
+  if (/\btem\b.+\bentre os\b/i.test(base)) {
+    return conciseSummary(base.replace(/\btem\b/i, "agora tem"));
+  }
+
+  return conciseSummary(base);
 }
 
 function tagValue(block, tag) {
@@ -514,7 +550,7 @@ async function getNews(config, force = false) {
       .slice(0, 3));
   }
 
-  const enriched = await Promise.all(grouped.map(enrichStorySummary));
+  const enriched = dedupeNews(await Promise.all(grouped.map(enrichStorySummary)));
 
   newsCache = {
     expiresAt: Date.now() + 15 * 60 * 1000,
@@ -540,6 +576,24 @@ function fallbackNews(config) {
     source: "cache",
     publishedAt: new Date().toISOString()
   }));
+}
+
+function dedupeNews(items) {
+  const seen = new Set();
+  return items.filter((item) => {
+    const key = normalizeText(cleanStoryTitle(item))
+      .replace(/\b(brasil|mundo|china|tech|tecnologia)\b/g, "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .split(" ")
+      .slice(0, 10)
+      .join(" ");
+
+    if (!key) return true;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 function unfoldIcs(text) {
