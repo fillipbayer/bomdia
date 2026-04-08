@@ -39,6 +39,7 @@ const dom = {
   settingMorningMinute: document.querySelector("#settingMorningMinute"),
   settingProvider: document.querySelector("#settingProvider"),
   settingElevenVoiceId: document.querySelector("#settingElevenVoiceId"),
+  settingElevenApiKey: document.querySelector("#settingElevenApiKey"),
   settingVoice: document.querySelector("#settingVoice")
 };
 
@@ -111,6 +112,12 @@ function categoryIcon(category) {
     Cultura: "♪",
     Esportes: "⚑"
   }[category] || category.slice(0, 2);
+}
+
+function shortSummary(value) {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  if (text.length <= 150) return text;
+  return `${text.slice(0, 147).trim()}...`;
 }
 
 async function api(path, options = {}) {
@@ -189,16 +196,16 @@ function render(data) {
       <div class="news-group-list">
         ${group.items.map((item, index) => `
           <article class="news-item ${index === 0 ? "is-featured" : ""}">
-            ${item.imageUrl ? `<img src="${escapeHtml(item.imageUrl)}" alt="" loading="lazy">` : `<div class="news-image-fallback news-${escapeHtml(group.category.toLowerCase())}" aria-hidden="true">${escapeHtml(categoryIcon(group.category))}</div>`}
-            <div>
+            <div class="news-icon news-${escapeHtml(group.category.toLowerCase())}" aria-hidden="true">${escapeHtml(categoryIcon(group.category))}</div>
+            <div class="news-copy">
               <div class="news-meta">
                 <span class="category">${escapeHtml(item.source || "RSS")}</span>
                 <span class="meta">${displayTime(item.publishedAt, timeZone)}</span>
               </div>
               <h4>${escapeHtml(item.title)}</h4>
-              <p>${escapeHtml(item.summary)}</p>
-              ${item.url ? `<a href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer">Abrir</a>` : ""}
+              <p>${escapeHtml(shortSummary(item.summary))}</p>
             </div>
+            ${item.url ? `<a class="news-link" href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer" aria-label="Abrir notícia">↗</a>` : ""}
           </article>
         `).join("")}
       </div>
@@ -253,6 +260,8 @@ function populateSettings(settings) {
   dom.settingMorningMinute.value = settings.morningBriefing?.minute ?? 0;
   dom.settingProvider.value = settings.tts?.provider || "elevenlabs";
   dom.settingElevenVoiceId.value = settings.tts?.elevenLabsVoiceId || "JBFqnCBsd6RMkjVDRZzb";
+  dom.settingElevenApiKey.value = "";
+  dom.settingElevenApiKey.placeholder = settings.tts?.hasElevenLabsApiKey ? "Chave salva" : "Cole para ativar áudio premium";
   dom.settingVoice.value = settings.tts?.openaiVoice || "marin";
 }
 
@@ -284,6 +293,7 @@ function settingsPayload() {
       openaiVoice: dom.settingVoice.value.trim() || "marin",
       elevenLabsModel: currentSettings?.tts?.elevenLabsModel || "eleven_multilingual_v2",
       elevenLabsVoiceId: dom.settingElevenVoiceId.value.trim() || "JBFqnCBsd6RMkjVDRZzb",
+      elevenLabsApiKey: dom.settingElevenApiKey.value.trim(),
       responseFormat: dom.settingProvider.value === "elevenlabs" ? "mp3_44100_128" : "mp3",
       speed: currentSettings?.tts?.speed || 0.92,
       stability: currentSettings?.tts?.stability ?? 0.44,

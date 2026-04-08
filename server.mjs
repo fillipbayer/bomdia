@@ -155,6 +155,7 @@ function publicSettings(config) {
       openaiVoice: config.tts?.openaiVoice || "",
       elevenLabsModel: config.tts?.elevenLabsModel || "eleven_multilingual_v2",
       elevenLabsVoiceId: config.tts?.elevenLabsVoiceId || "",
+      hasElevenLabsApiKey: Boolean(process.env.ELEVENLABS_API_KEY || config.tts?.elevenLabsApiKey),
       responseFormat: config.tts?.responseFormat || "mp3",
       speed: Number(config.tts?.speed || 1),
       stability: Number(config.tts?.stability ?? 0.44),
@@ -197,6 +198,7 @@ function normalizeSettings(payload, currentConfig) {
       openaiVoice: String(settings.tts?.openaiVoice || currentConfig.tts?.openaiVoice || "marin").trim(),
       elevenLabsModel: String(settings.tts?.elevenLabsModel || currentConfig.tts?.elevenLabsModel || "eleven_multilingual_v2").trim(),
       elevenLabsVoiceId: String(settings.tts?.elevenLabsVoiceId || currentConfig.tts?.elevenLabsVoiceId || "JBFqnCBsd6RMkjVDRZzb").trim(),
+      elevenLabsApiKey: String(settings.tts?.elevenLabsApiKey || currentConfig.tts?.elevenLabsApiKey || "").trim(),
       responseFormat: String(settings.tts?.responseFormat || currentConfig.tts?.responseFormat || "mp3_44100_128").trim(),
       speed: Number(settings.tts?.speed || currentConfig.tts?.speed || 1),
       stability: Number(settings.tts?.stability ?? currentConfig.tts?.stability ?? 0.44),
@@ -520,7 +522,7 @@ function audioExtension(format = "mp3") {
 async function createElevenLabsAudio(config, briefing) {
   const tts = config.tts || {};
   const voiceId = tts.elevenLabsVoiceId || process.env.ELEVENLABS_VOICE_ID;
-  const apiKey = process.env.ELEVENLABS_API_KEY;
+  const apiKey = process.env.ELEVENLABS_API_KEY || tts.elevenLabsApiKey;
 
   if (!apiKey || !voiceId) return null;
 
@@ -762,7 +764,7 @@ async function handleApi(request, response, url) {
       ttsModel: config.tts?.openaiModel || null,
       ttsVoice: config.tts?.openaiVoice || null,
       elevenLabsVoiceId: config.tts?.elevenLabsVoiceId || null,
-      hasElevenLabsKey: Boolean(process.env.ELEVENLABS_API_KEY),
+      hasElevenLabsKey: Boolean(process.env.ELEVENLABS_API_KEY || config.tts?.elevenLabsApiKey),
       hasOpenAiKey: Boolean(process.env.OPENAI_API_KEY),
       calendarEnabled: Boolean(config.calendar?.icalUrl),
       dataDir: DATA_DIR
