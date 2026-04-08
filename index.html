@@ -200,7 +200,18 @@
             </label>
           </div>
           <label>
-            <span>Voz</span>
+            <span>Provedor de voz</span>
+            <select id="settingProvider" name="provider">
+              <option value="elevenlabs">ElevenLabs podcast</option>
+              <option value="openai">OpenAI TTS</option>
+            </select>
+          </label>
+          <label>
+            <span>ElevenLabs Voice ID</span>
+            <input id="settingElevenVoiceId" name="elevenVoiceId" type="text" placeholder="JBFqnCBsd6RMkjVDRZzb">
+          </label>
+          <label>
+            <span>Voz OpenAI</span>
             <input id="settingVoice" name="voice" type="text" placeholder="marin">
           </label>
           <button class="primary-button" type="submit">

@@ -14,16 +14,22 @@ services:
       - key: TIMEZONE
         value: America/Sao_Paulo
       - key: TTS_PROVIDER
-        value: openai
+        value: elevenlabs
       - key: OPENAI_TTS_MODEL
         value: gpt-4o-mini-tts
       - key: OPENAI_TTS_VOICE
         value: marin
+      - key: ELEVENLABS_MODEL
+        value: eleven_multilingual_v2
+      - key: ELEVENLABS_VOICE_ID
+        value: JBFqnCBsd6RMkjVDRZzb
       - key: TTS_RESPONSE_FORMAT
-        value: mp3
+        value: mp3_44100_128
       - key: TTS_INSTRUCTIONS
         value: Fale em portugues brasileiro, como apresentador de podcast matinal premium, natural, calmo e inteligente.
       - key: OPENAI_API_KEY
+        sync: false
+      - key: ELEVENLABS_API_KEY
         sync: false
     disk:
       name: daily-board-data

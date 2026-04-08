@@ -29,6 +29,7 @@ body {
 
 button,
 input,
+select,
 textarea,
 audio {
   font: inherit;
@@ -456,6 +457,7 @@ a {
 }
 
 .ask-bar input,
+.settings-form select,
 .settings-form input,
 .settings-form textarea {
   min-width: 0;

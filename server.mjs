@@ -112,8 +112,14 @@ function configFromEnv() {
       provider: process.env.TTS_PROVIDER,
       openaiModel: process.env.OPENAI_TTS_MODEL,
       openaiVoice: process.env.OPENAI_TTS_VOICE,
+      elevenLabsModel: process.env.ELEVENLABS_MODEL,
+      elevenLabsVoiceId: process.env.ELEVENLABS_VOICE_ID,
       responseFormat: process.env.TTS_RESPONSE_FORMAT,
       speed: process.env.TTS_SPEED ? Number(process.env.TTS_SPEED) : undefined,
+      stability: process.env.ELEVENLABS_STABILITY ? Number(process.env.ELEVENLABS_STABILITY) : undefined,
+      similarityBoost: process.env.ELEVENLABS_SIMILARITY_BOOST ? Number(process.env.ELEVENLABS_SIMILARITY_BOOST) : undefined,
+      style: process.env.ELEVENLABS_STYLE ? Number(process.env.ELEVENLABS_STYLE) : undefined,
+      useSpeakerBoost: process.env.ELEVENLABS_SPEAKER_BOOST ? process.env.ELEVENLABS_SPEAKER_BOOST !== "false" : undefined,
       instructions: process.env.TTS_INSTRUCTIONS
     };
     config.tts = Object.fromEntries(Object.entries(config.tts).filter(([, value]) => value !== undefined && value !== ""));
@@ -140,8 +146,14 @@ function publicSettings(config) {
       provider: config.tts?.provider || "browser",
       openaiModel: config.tts?.openaiModel || "",
       openaiVoice: config.tts?.openaiVoice || "",
+      elevenLabsModel: config.tts?.elevenLabsModel || "eleven_multilingual_v2",
+      elevenLabsVoiceId: config.tts?.elevenLabsVoiceId || "",
       responseFormat: config.tts?.responseFormat || "mp3",
       speed: Number(config.tts?.speed || 1),
+      stability: Number(config.tts?.stability ?? 0.44),
+      similarityBoost: Number(config.tts?.similarityBoost ?? 0.78),
+      style: Number(config.tts?.style ?? 0.35),
+      useSpeakerBoost: config.tts?.useSpeakerBoost !== false,
       instructions: config.tts?.instructions || ""
     }
   };
@@ -176,8 +188,14 @@ function normalizeSettings(payload, currentConfig) {
       provider: String(settings.tts?.provider || currentConfig.tts?.provider || "openai").trim(),
       openaiModel: String(settings.tts?.openaiModel || currentConfig.tts?.openaiModel || "gpt-4o-mini-tts").trim(),
       openaiVoice: String(settings.tts?.openaiVoice || currentConfig.tts?.openaiVoice || "marin").trim(),
-      responseFormat: String(settings.tts?.responseFormat || currentConfig.tts?.responseFormat || "mp3").trim(),
+      elevenLabsModel: String(settings.tts?.elevenLabsModel || currentConfig.tts?.elevenLabsModel || "eleven_multilingual_v2").trim(),
+      elevenLabsVoiceId: String(settings.tts?.elevenLabsVoiceId || currentConfig.tts?.elevenLabsVoiceId || "JBFqnCBsd6RMkjVDRZzb").trim(),
+      responseFormat: String(settings.tts?.responseFormat || currentConfig.tts?.responseFormat || "mp3_44100_128").trim(),
       speed: Number(settings.tts?.speed || currentConfig.tts?.speed || 1),
+      stability: Number(settings.tts?.stability ?? currentConfig.tts?.stability ?? 0.44),
+      similarityBoost: Number(settings.tts?.similarityBoost ?? currentConfig.tts?.similarityBoost ?? 0.78),
+      style: Number(settings.tts?.style ?? currentConfig.tts?.style ?? 0.35),
+      useSpeakerBoost: settings.tts?.useSpeakerBoost !== false,
       instructions: String(settings.tts?.instructions || currentConfig.tts?.instructions || "").trim()
     }
   };
@@ -468,41 +486,100 @@ function audioInputFor(briefing) {
     : briefing.script;
 }
 
+function podcastInputFor(briefing) {
+  return [
+    "Narre em portugues brasileiro como um apresentador de podcast matinal premium: natural, calmo, inteligente, com pausas curtas entre blocos.",
+    "",
+    briefing.script.replace(/\.\s+/g, ".\n\n"),
+    "",
+    "Esse foi o seu Bom dia."
+  ].join("\n");
+}
+
+function audioExtension(format = "mp3") {
+  return format.split("_")[0] || "mp3";
+}
+
+async function createElevenLabsAudio(config, briefing) {
+  const tts = config.tts || {};
+  const voiceId = tts.elevenLabsVoiceId || process.env.ELEVENLABS_VOICE_ID;
+  const apiKey = process.env.ELEVENLABS_API_KEY;
+
+  if (!apiKey || !voiceId) return null;
+
+  const outputFormat = tts.responseFormat?.startsWith("mp3_") ? tts.responseFormat : "mp3_44100_128";
+  const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=${outputFormat}`, {
+    method: "POST",
+    headers: {
+      "xi-api-key": apiKey,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      text: podcastInputFor(briefing),
+      model_id: tts.elevenLabsModel || "eleven_multilingual_v2",
+      language_code: "pt",
+      voice_settings: {
+        stability: Number(tts.stability ?? 0.44),
+        similarity_boost: Number(tts.similarityBoost ?? 0.78),
+        style: Number(tts.style ?? 0.35),
+        use_speaker_boost: tts.useSpeakerBoost !== false,
+        speed: Number(tts.speed || 0.92)
+      }
+    })
+  });
+
+  if (!response.ok) throw new Error(`ElevenLabs TTS retornou ${response.status}: ${await response.text()}`);
+  await mkdir(AUDIO_DIR, { recursive: true });
+  const fileName = `${briefing.dateKey}-${briefing.id}.${audioExtension(outputFormat)}`;
+  await writeFile(join(AUDIO_DIR, fileName), Buffer.from(await response.arrayBuffer()));
+  return { url: `/audio/${fileName}`, provider: "elevenlabs" };
+}
+
+async function createOpenAiAudio(config, briefing) {
+  const tts = config.tts || {};
+
+  if (!process.env.OPENAI_API_KEY || !tts.openaiModel) return null;
+
+  const response = await fetch("https://api.openai.com/v1/audio/speech", {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      model: tts.openaiModel,
+      voice: tts.openaiVoice || "marin",
+      input: audioInputFor(briefing),
+      instructions: tts.instructions,
+      response_format: tts.responseFormat === "mp3_44100_128" ? "mp3" : tts.responseFormat || "mp3",
+      speed: Number(tts.speed || 1)
+    })
+  });
+
+  if (!response.ok) throw new Error(`OpenAI TTS retornou ${response.status}: ${await response.text()}`);
+  await mkdir(AUDIO_DIR, { recursive: true });
+  const responseFormat = tts.responseFormat === "mp3_44100_128" ? "mp3" : tts.responseFormat || "mp3";
+  const fileName = `${briefing.dateKey}-${briefing.id}.${audioExtension(responseFormat)}`;
+  await writeFile(join(AUDIO_DIR, fileName), Buffer.from(await response.arrayBuffer()));
+  return { url: `/audio/${fileName}`, provider: "openai" };
+}
+
 async function maybeCreateAudio(config, briefing) {
   const tts = config.tts || {};
-  const shouldUseOpenAi = tts.provider === "openai" && process.env.OPENAI_API_KEY && tts.openaiModel;
+  const providers = tts.provider === "openai" ? ["openai", "elevenlabs"] : ["elevenlabs", "openai"];
 
-  if (!shouldUseOpenAi) return null;
-
-  try {
-    const response = await fetch("https://api.openai.com/v1/audio/speech", {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        "content-type": "application/json"
-      },
-      body: JSON.stringify({
-        model: tts.openaiModel,
-        voice: tts.openaiVoice || "alloy",
-        input: audioInputFor(briefing),
-        instructions: tts.instructions,
-        response_format: tts.responseFormat || "mp3",
-        speed: Number(tts.speed || 1)
-      })
-    });
-
-    if (!response.ok) throw new Error(`TTS retornou ${response.status}`);
-    await mkdir(AUDIO_DIR, { recursive: true });
-    const responseFormat = tts.responseFormat || "mp3";
-    const fileName = `${briefing.dateKey}-${briefing.id}.${responseFormat}`;
-    const filePath = join(AUDIO_DIR, fileName);
-    const bytes = Buffer.from(await response.arrayBuffer());
-    await writeFile(filePath, bytes);
-    return { url: `/audio/${fileName}`, provider: "openai" };
-  } catch (error) {
-    console.warn("Falha ao gerar audio TTS:", error.message);
-    return null;
+  for (const provider of providers) {
+    try {
+      const audio = provider === "elevenlabs"
+        ? await createElevenLabsAudio(config, briefing)
+        : await createOpenAiAudio(config, briefing);
+      if (audio) return audio;
+    } catch (error) {
+      console.warn(`Falha ao gerar audio com ${provider}:`, error.message);
+    }
   }
+
+  return null;
 }
 
 async function createBriefing({ dateKey, mode, store, config, forceNews }) {

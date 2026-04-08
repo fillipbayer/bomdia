@@ -64,9 +64,17 @@ Edite `config.json` para ajustar:
 - `manualAgenda`: agenda fixa usada quando nao houver calendario conectado.
 - `tts`: audio em arquivo. Com `OPENAI_API_KEY`, o servidor usa `gpt-4o-mini-tts`, salva MP3 em `data/audio/` e o player toca como podcast. Sem chave, o botao usa a voz do navegador como fallback.
 
-Para ativar o audio premium:
+Para ativar o audio premium com ElevenLabs:
 
 ```bash
+export ELEVENLABS_API_KEY="sua-chave"
+npm start
+```
+
+Se preferir usar OpenAI TTS:
+
+```bash
+export TTS_PROVIDER=openai
 export OPENAI_API_KEY="sua-chave"
 npm start
 ```
@@ -80,7 +88,7 @@ npm start
 - Boletim tambem e criado quando o dia e aberto pela primeira vez.
 - Botao `Novo boletim` para gerar uma atualizacao do dia.
 - Player de podcast no painel principal.
-- TTS neural em MP3 com instrucoes de voz, quando `OPENAI_API_KEY` estiver configurada.
+- TTS neural em MP3 com ElevenLabs ou OpenAI, quando a respectiva chave estiver configurada.
 - Palavra diaria de ingles avancado e mandarim basico.
 - Agenda por iCal quando configurada, com fallback manual.
 - Tarefas salvas no backend.
@@ -130,10 +138,12 @@ Railway detecta o `Dockerfile`. Configure:
 - `DATA_DIR=/data`
 - `OWNER_NAME=Oto`
 - `TIMEZONE=America/Sao_Paulo`
-- `TTS_PROVIDER=openai`
+- `TTS_PROVIDER=elevenlabs`
 - `OPENAI_TTS_MODEL=gpt-4o-mini-tts`
 - `OPENAI_TTS_VOICE=marin`
-- `TTS_RESPONSE_FORMAT=mp3`
+- `ELEVENLABS_MODEL=eleven_multilingual_v2`
+- `ELEVENLABS_VOICE_ID=JBFqnCBsd6RMkjVDRZzb`
+- `TTS_RESPONSE_FORMAT=mp3_44100_128`
 
 Use um volume persistente montado em `/data`.
 

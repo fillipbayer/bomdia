@@ -52,11 +52,17 @@
     }
   ],
   "tts": {
-    "provider": "openai",
+    "provider": "elevenlabs",
     "openaiModel": "gpt-4o-mini-tts",
     "openaiVoice": "marin",
-    "responseFormat": "mp3",
-    "speed": 1,
+    "elevenLabsModel": "eleven_multilingual_v2",
+    "elevenLabsVoiceId": "JBFqnCBsd6RMkjVDRZzb",
+    "responseFormat": "mp3_44100_128",
+    "speed": 0.92,
+    "stability": 0.44,
+    "similarityBoost": 0.78,
+    "style": 0.35,
+    "useSpeakerBoost": true,
     "instructions": "Fale em portugues brasileiro, como apresentador de podcast matinal premium: natural, calmo, inteligente, com pequenas pausas entre blocos, sem soar como leitura robotica."
   }
 }

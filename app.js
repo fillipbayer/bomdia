@@ -37,6 +37,8 @@ const dom = {
   settingFeeds: document.querySelector("#settingFeeds"),
   settingMorningHour: document.querySelector("#settingMorningHour"),
   settingMorningMinute: document.querySelector("#settingMorningMinute"),
+  settingProvider: document.querySelector("#settingProvider"),
+  settingElevenVoiceId: document.querySelector("#settingElevenVoiceId"),
   settingVoice: document.querySelector("#settingVoice")
 };
 
@@ -196,6 +198,8 @@ function populateSettings(settings) {
     .join("\n");
   dom.settingMorningHour.value = settings.morningBriefing?.hour ?? 7;
   dom.settingMorningMinute.value = settings.morningBriefing?.minute ?? 0;
+  dom.settingProvider.value = settings.tts?.provider || "elevenlabs";
+  dom.settingElevenVoiceId.value = settings.tts?.elevenLabsVoiceId || "JBFqnCBsd6RMkjVDRZzb";
   dom.settingVoice.value = settings.tts?.openaiVoice || "marin";
 }
 
@@ -222,11 +226,17 @@ function settingsPayload() {
       })
       .filter((feed) => feed.category && feed.url),
     tts: {
-      provider: currentSettings?.tts?.provider || "openai",
+      provider: dom.settingProvider.value || "elevenlabs",
       openaiModel: currentSettings?.tts?.openaiModel || "gpt-4o-mini-tts",
       openaiVoice: dom.settingVoice.value.trim() || "marin",
-      responseFormat: currentSettings?.tts?.responseFormat || "mp3",
-      speed: currentSettings?.tts?.speed || 1,
+      elevenLabsModel: currentSettings?.tts?.elevenLabsModel || "eleven_multilingual_v2",
+      elevenLabsVoiceId: dom.settingElevenVoiceId.value.trim() || "JBFqnCBsd6RMkjVDRZzb",
+      responseFormat: dom.settingProvider.value === "elevenlabs" ? "mp3_44100_128" : "mp3",
+      speed: currentSettings?.tts?.speed || 0.92,
+      stability: currentSettings?.tts?.stability ?? 0.44,
+      similarityBoost: currentSettings?.tts?.similarityBoost ?? 0.78,
+      style: currentSettings?.tts?.style ?? 0.35,
+      useSpeakerBoost: currentSettings?.tts?.useSpeakerBoost !== false,
       instructions: currentSettings?.tts?.instructions || ""
     }
   };
