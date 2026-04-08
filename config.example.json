@@ -61,6 +61,7 @@
     "openaiVoice": "marin",
     "elevenLabsModel": "eleven_multilingual_v2",
     "elevenLabsVoiceId": "JBFqnCBsd6RMkjVDRZzb",
+    "macosVoice": "Luciana",
     "responseFormat": "mp3_44100_128",
     "speed": 0.92,
     "stability": 0.44,

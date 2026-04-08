@@ -1,11 +1,14 @@
 import { createServer } from "node:http";
-import { readFile, writeFile, mkdir, stat } from "node:fs/promises";
+import { readFile, writeFile, mkdir, stat, unlink } from "node:fs/promises";
 import { createReadStream } from "node:fs";
+import { execFile } from "node:child_process";
 import { dirname, extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
+import { promisify } from "node:util";
 import crypto from "node:crypto";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const execFileAsync = promisify(execFile);
 const PORT = Number(process.env.PORT || 4173);
 const HOST = process.env.HOST || "0.0.0.0";
 const APP_USER = process.env.APP_USER || "oto";
@@ -24,6 +27,7 @@ const mimeTypes = {
   ".webmanifest": "application/manifest+json; charset=utf-8",
   ".svg": "image/svg+xml",
   ".mp3": "audio/mpeg",
+  ".m4a": "audio/mp4",
   ".aac": "audio/aac",
   ".flac": "audio/flac",
   ".opus": "audio/ogg",
@@ -121,6 +125,7 @@ function configFromEnv() {
       openaiVoice: process.env.OPENAI_TTS_VOICE,
       elevenLabsModel: process.env.ELEVENLABS_MODEL,
       elevenLabsVoiceId: process.env.ELEVENLABS_VOICE_ID,
+      macosVoice: process.env.MACOS_TTS_VOICE,
       responseFormat: process.env.TTS_RESPONSE_FORMAT,
       speed: process.env.TTS_SPEED ? Number(process.env.TTS_SPEED) : undefined,
       stability: process.env.ELEVENLABS_STABILITY ? Number(process.env.ELEVENLABS_STABILITY) : undefined,
@@ -155,6 +160,7 @@ function publicSettings(config) {
       openaiVoice: config.tts?.openaiVoice || "",
       elevenLabsModel: config.tts?.elevenLabsModel || "eleven_multilingual_v2",
       elevenLabsVoiceId: config.tts?.elevenLabsVoiceId || "",
+      macosVoice: config.tts?.macosVoice || "Luciana",
       hasElevenLabsApiKey: Boolean(process.env.ELEVENLABS_API_KEY || config.tts?.elevenLabsApiKey),
       responseFormat: config.tts?.responseFormat || "mp3",
       speed: Number(config.tts?.speed || 1),
@@ -199,6 +205,7 @@ function normalizeSettings(payload, currentConfig) {
       elevenLabsModel: String(settings.tts?.elevenLabsModel || currentConfig.tts?.elevenLabsModel || "eleven_multilingual_v2").trim(),
       elevenLabsVoiceId: String(settings.tts?.elevenLabsVoiceId || currentConfig.tts?.elevenLabsVoiceId || "JBFqnCBsd6RMkjVDRZzb").trim(),
       elevenLabsApiKey: String(settings.tts?.elevenLabsApiKey || currentConfig.tts?.elevenLabsApiKey || "").trim(),
+      macosVoice: String(settings.tts?.macosVoice || currentConfig.tts?.macosVoice || "Luciana").trim(),
       responseFormat: String(settings.tts?.responseFormat || currentConfig.tts?.responseFormat || "mp3_44100_128").trim(),
       speed: Number(settings.tts?.speed || currentConfig.tts?.speed || 1),
       stability: Number(settings.tts?.stability ?? currentConfig.tts?.stability ?? 0.44),
@@ -583,15 +590,42 @@ async function createOpenAiAudio(config, briefing) {
   return { url: `/audio/${fileName}`, provider: "openai" };
 }
 
+async function createMacOsAudio(config, briefing) {
+  if (process.platform !== "darwin") return null;
+
+  await mkdir(AUDIO_DIR, { recursive: true });
+  const fileName = `${briefing.dateKey}-${briefing.id}.m4a`;
+  const filePath = join(AUDIO_DIR, fileName);
+  const inputPath = join(AUDIO_DIR, `${briefing.dateKey}-${briefing.id}.txt`);
+  await writeFile(inputPath, audioInputFor(briefing));
+  try {
+    await execFileAsync("/usr/bin/say", [
+      "-v",
+      config.tts?.macosVoice || "Luciana",
+      "-f",
+      inputPath,
+      "-o",
+      filePath,
+      "--file-format=m4af",
+      "--data-format=aac"
+    ], { timeout: 120000 });
+  } finally {
+    await unlink(inputPath).catch(() => {});
+  }
+  return { url: `/audio/${fileName}`, provider: "macos" };
+}
+
 async function maybeCreateAudio(config, briefing) {
   const tts = config.tts || {};
-  const providers = tts.provider === "openai" ? ["openai", "elevenlabs"] : ["elevenlabs", "openai"];
+  const providers = tts.provider === "openai" ? ["openai", "elevenlabs", "macos"] : ["elevenlabs", "openai", "macos"];
 
   for (const provider of providers) {
     try {
       const audio = provider === "elevenlabs"
         ? await createElevenLabsAudio(config, briefing)
-        : await createOpenAiAudio(config, briefing);
+        : provider === "openai"
+          ? await createOpenAiAudio(config, briefing)
+          : await createMacOsAudio(config, briefing);
       if (audio) return audio;
     } catch (error) {
       console.warn(`Falha ao gerar audio com ${provider}:`, error.message);

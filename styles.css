@@ -508,6 +508,37 @@ a {
   margin-top: 12px;
 }
 
+.player-card {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 10px;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.player-main {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.player-main input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent-strong);
+}
+
+.player-times {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .stack-list {
   display: grid;
   gap: 10px;

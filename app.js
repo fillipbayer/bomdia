@@ -12,6 +12,10 @@ const dom = {
   refreshButton: document.querySelector("#refreshButton"),
   settingsButton: document.querySelector("#settingsButton"),
   audioPlayer: document.querySelector("#audioPlayer"),
+  playerPlayButton: document.querySelector("#playerPlayButton"),
+  playerSeek: document.querySelector("#playerSeek"),
+  playerCurrent: document.querySelector("#playerCurrent"),
+  playerDuration: document.querySelector("#playerDuration"),
   audioHint: document.querySelector("#audioHint"),
   audioTitle: document.querySelector("#audioTitle"),
   installButton: document.querySelector("#installButton"),
@@ -40,7 +44,8 @@ const dom = {
   settingProvider: document.querySelector("#settingProvider"),
   settingElevenVoiceId: document.querySelector("#settingElevenVoiceId"),
   settingElevenApiKey: document.querySelector("#settingElevenApiKey"),
-  settingVoice: document.querySelector("#settingVoice")
+  settingVoice: document.querySelector("#settingVoice"),
+  settingMacosVoice: document.querySelector("#settingMacosVoice")
 };
 
 let deferredInstallPrompt;
@@ -120,6 +125,13 @@ function shortSummary(value) {
   return `${text.slice(0, 147).trim()}...`;
 }
 
+function formatDuration(value) {
+  if (!Number.isFinite(value)) return "0:00";
+  const minutes = Math.floor(value / 60);
+  const seconds = Math.floor(value % 60);
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
 async function api(path, options = {}) {
   const response = await fetch(path, {
     headers: { "content-type": "application/json", ...options.headers },
@@ -180,7 +192,7 @@ function render(data) {
   if (audioUrl) {
     dom.audioPlayer.src = audioUrl;
     dom.audioTitle.textContent = "Podcast pronto";
-    dom.audioHint.textContent = `MP3 neural gerado por ${day.audio.provider}.`;
+    dom.audioHint.textContent = `Arquivo gerado por ${day.audio.provider}. Use o player para pausar, avançar e retomar.`;
   } else {
     dom.audioPlayer.removeAttribute("src");
     dom.audioTitle.textContent = "Podcast";
@@ -263,6 +275,7 @@ function populateSettings(settings) {
   dom.settingElevenApiKey.value = "";
   dom.settingElevenApiKey.placeholder = settings.tts?.hasElevenLabsApiKey ? "Chave salva" : "Cole para ativar áudio premium";
   dom.settingVoice.value = settings.tts?.openaiVoice || "marin";
+  dom.settingMacosVoice.value = settings.tts?.macosVoice || "Luciana";
 }
 
 function settingsPayload() {
@@ -294,6 +307,7 @@ function settingsPayload() {
       elevenLabsModel: currentSettings?.tts?.elevenLabsModel || "eleven_multilingual_v2",
       elevenLabsVoiceId: dom.settingElevenVoiceId.value.trim() || "JBFqnCBsd6RMkjVDRZzb",
       elevenLabsApiKey: dom.settingElevenApiKey.value.trim(),
+      macosVoice: dom.settingMacosVoice.value.trim() || "Luciana",
       responseFormat: dom.settingProvider.value === "elevenlabs" ? "mp3_44100_128" : "mp3",
       speed: currentSettings?.tts?.speed || 0.92,
       stability: currentSettings?.tts?.stability ?? 0.44,
@@ -326,13 +340,19 @@ async function saveSettings(event) {
   await generateBriefing("manual");
 }
 
-function speakBriefing() {
+async function speakBriefing() {
   const day = currentData?.day;
   if (!day) return;
 
   if (day.audio?.url) {
     dom.audioPlayer.hidden = false;
-    dom.audioPlayer.play();
+    await dom.audioPlayer.play();
+    return;
+  }
+
+  await generateBriefing("manual");
+  if (currentData?.day?.audio?.url) {
+    await dom.audioPlayer.play();
     return;
   }
 
@@ -417,7 +437,44 @@ dom.installButton.addEventListener("click", async () => {
   dom.installButton.hidden = true;
 });
 
-dom.playButton.addEventListener("click", speakBriefing);
+function updatePlayerIcon(isPlaying) {
+  dom.playerPlayButton.innerHTML = isPlaying
+    ? '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M8 5h3v14H8ZM13 5h3v14h-3Z"/></svg>'
+    : '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M8 5v14l11-7Z"/></svg>';
+}
+
+function syncPlayerProgress() {
+  const duration = dom.audioPlayer.duration || 0;
+  const current = dom.audioPlayer.currentTime || 0;
+  dom.playerSeek.value = duration ? String((current / duration) * 100) : "0";
+  dom.playerCurrent.textContent = formatDuration(current);
+  dom.playerDuration.textContent = formatDuration(duration);
+}
+
+async function togglePlayer() {
+  if (!currentData?.day?.audio?.url) {
+    await speakBriefing();
+    return;
+  }
+
+  if (dom.audioPlayer.paused) {
+    await dom.audioPlayer.play();
+  } else {
+    dom.audioPlayer.pause();
+  }
+}
+
+dom.playButton.addEventListener("click", () => speakBriefing().catch(handleError));
+dom.playerPlayButton.addEventListener("click", () => togglePlayer().catch(handleError));
+dom.playerSeek.addEventListener("input", () => {
+  const duration = dom.audioPlayer.duration || 0;
+  if (duration) dom.audioPlayer.currentTime = (Number(dom.playerSeek.value) / 100) * duration;
+});
+dom.audioPlayer.addEventListener("timeupdate", syncPlayerProgress);
+dom.audioPlayer.addEventListener("loadedmetadata", syncPlayerProgress);
+dom.audioPlayer.addEventListener("play", () => updatePlayerIcon(true));
+dom.audioPlayer.addEventListener("pause", () => updatePlayerIcon(false));
+dom.audioPlayer.addEventListener("ended", () => updatePlayerIcon(false));
 dom.stopButton.addEventListener("click", stopAudio);
 dom.generateButton.addEventListener("click", () => generateBriefing("manual").catch(handleError));
 dom.refreshButton.addEventListener("click", () => loadDay(currentDay).catch(handleError));
