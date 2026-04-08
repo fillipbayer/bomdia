@@ -22,10 +22,16 @@ const dom = {
   taskForm: document.querySelector("#taskForm"),
   taskInput: document.querySelector("#taskInput"),
   newsBoard: document.querySelector("#newsBoard"),
+  newsViewLink: document.querySelector("#newsViewLink"),
+  newsViewLabel: document.querySelector("#newsViewLabel"),
   wordsBoard: document.querySelector("#wordsBoard"),
   historyList: document.querySelector("#historyList"),
   newsCount: document.querySelector("#newsCount"),
   calendarStatus: document.querySelector("#calendarStatus"),
+  quickNews: document.querySelector("#quickNews"),
+  quickAgenda: document.querySelector("#quickAgenda"),
+  quickTasks: document.querySelector("#quickTasks"),
+  quickAudio: document.querySelector("#quickAudio"),
   settingsPanel: document.querySelector("#settingsPanel"),
   settingsForm: document.querySelector("#settingsForm"),
   settingsStatus: document.querySelector("#settingsStatus"),
@@ -49,6 +55,11 @@ let currentData;
 let currentSettings;
 let speechUtterance;
 let wordUtterance;
+let wordAudioPlayer = new Audio();
+
+function currentView() {
+  return new URLSearchParams(window.location.search).get("view") === "news" ? "news" : "daily";
+}
 
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (char) => ({
@@ -131,13 +142,76 @@ function shortSummary(value) {
   return `${text.slice(0, 107).trim()}...`;
 }
 
+function normalizedText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function overlapRatio(left, right) {
+  const leftWords = new Set(normalizedText(left).split(" ").filter((word) => word.length > 2));
+  const rightWords = normalizedText(right).split(" ").filter((word) => word.length > 2);
+  if (!leftWords.size || !rightWords.length) return 0;
+  return rightWords.filter((word) => leftWords.has(word)).length / Math.max(1, rightWords.length);
+}
+
+function looksWeakSummary(summary) {
+  const text = String(summary || "").trim();
+  return !text || text.length < 28 || /^["“'][^"”']+["”']$/.test(text);
+}
+
+function fallbackCardSummary(item) {
+  const title = String(item.title || "")
+    .replace(/\s+-\s+[^-]+$/, "")
+    .replace(/^["“][^"”]+["”]\s*:\s*/u, "")
+    .replace(/^["“][^"”]+["”]\s*/u, "")
+    .replace(/[“”"]/g, "")
+    .trim();
+
+  if (title.includes(":")) {
+    const [lead, tail] = title.split(/:\s+/, 2);
+    if (tail && tail.length > 24) return shortSummary(tail);
+    if (lead) return shortSummary(`A matéria explica ${lead.toLowerCase()}.`);
+  }
+
+  if (/\bfutebol\b|\batleta\b|\bpontas\b|\bcontratado\b/i.test(title)) {
+    return shortSummary(`Mercado esportivo em foco: ${title}.`);
+  }
+
+  if (/\bgoverno\b|\banatel\b|\bleilão\b|\bgasolina\b|\betanol\b/i.test(title)) {
+    return shortSummary(`Movimento de política pública: ${title.replace(/\bavalia aumentar\b/i, "estuda elevar")}.`);
+  }
+
+  if (/\bchina\b|\bbyd\b|\btrump\b|\birã\b|\bcessar-fogo\b/i.test(title)) {
+    return shortSummary(`No exterior, o destaque é que ${title.charAt(0).toLowerCase() + title.slice(1)}.`);
+  }
+
+  if (/\bmuseus?\b|\bcultura\b|\bpicanha\b|\branking\b/i.test(title)) {
+    return shortSummary(`O destaque cultural de agora: ${title.replace(/\btem\b/i, "registra").replace(/\bentra em ranking\b/i, "ganha destaque em ranking")}.`);
+  }
+
+  return shortSummary(`O ponto central é que ${title.charAt(0).toLowerCase() + title.slice(1)}.`);
+}
+
+function newsSummaryForCard(item) {
+  const summary = String(item.summary || "").trim();
+  if (looksWeakSummary(summary) || overlapRatio(item.title, summary) > 0.8) {
+    return fallbackCardSummary(item);
+  }
+  return shortSummary(summary);
+}
+
 function heroDigest(day) {
   const grouped = groupNews(day.news);
   const highlights = grouped
     .map((group) => {
       const first = group.items[0];
       if (!first) return "";
-      return `${group.category}: ${shortSummary(first.summary || first.title)}`;
+      return `${group.category}: ${newsSummaryForCard(first)}`;
     })
     .filter(Boolean)
     .slice(0, 3);
@@ -192,15 +266,23 @@ function render(data) {
 
   const greeting = timeGreeting(timeZone);
   const ownerName = data.ownerName || "Bayer";
+  const view = currentView();
 
   dom.greetingTitle.textContent = `${greeting}, ${ownerName}`;
   dom.heroDate.textContent = displayDate(day.dateKey, timeZone);
-  dom.briefingTitle.textContent = displayLongDate(day.dateKey, timeZone);
+  dom.briefingTitle.textContent = "Seu radar essencial";
   dom.briefingTime.textContent = `último ${displayTime(day.generatedAt, timeZone)}`;
   dom.briefingSummary.textContent = heroDigest(day) || `Resumo do dia atualizado às ${displayTime(day.generatedAt, timeZone)}.`;
   dom.briefingScript.textContent = day.script;
   dom.newsCount.textContent = `${day.news.length}`;
   dom.calendarStatus.textContent = data.calendarEnabled ? "iCal" : "manual";
+  dom.quickNews.textContent = String(day.news.length);
+  dom.quickAgenda.textContent = String(day.agenda.length);
+  dom.quickTasks.textContent = String(day.tasks.filter((task) => !task.done).length);
+  dom.quickAudio.textContent = audioUrl ? "pronto" : "web";
+  dom.newsViewLink.href = view === "news" ? "./" : "?view=news";
+  dom.newsViewLabel.textContent = view === "news" ? "voltar ao daily" : "somente notícias";
+  document.body.dataset.view = view;
 
   dom.audioPlayer.hidden = !audioUrl;
   if (audioUrl) {
@@ -229,7 +311,7 @@ function render(data) {
                 <span class="meta">${displayTime(item.publishedAt, timeZone)}</span>
               </div>
               <h4>${escapeHtml(item.title)}</h4>
-              <p>${escapeHtml(shortSummary(item.summary))}</p>
+              <p>${escapeHtml(newsSummaryForCard(item))}</p>
             </div>
             ${item.url ? `<a class="news-link" href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer" aria-label="Abrir notícia">↗</a>` : ""}
           </article>
@@ -393,12 +475,26 @@ async function speakBriefing() {
   window.speechSynthesis.speak(speechUtterance);
 }
 
-function speakWord(text, lang) {
-  if (!("speechSynthesis" in window) || !text) return;
+async function speakWord(text, lang) {
+  if (!text) return;
+
+  try {
+    const audio = await api(`/api/word-audio?text=${encodeURIComponent(text)}&lang=${encodeURIComponent(lang)}`);
+    if (audio?.url) {
+      wordAudioPlayer.pause();
+      wordAudioPlayer.src = audio.url;
+      await wordAudioPlayer.play();
+      return;
+    }
+  } catch (error) {
+    console.warn("Falha no audio da palavra:", error.message);
+  }
+
+  if (!("speechSynthesis" in window)) return;
   window.speechSynthesis.cancel();
   wordUtterance = new SpeechSynthesisUtterance(text);
   wordUtterance.lang = lang;
-  wordUtterance.rate = lang === "zh-CN" ? 0.82 : 0.92;
+  wordUtterance.rate = lang === "zh-CN" ? 0.8 : 0.9;
   window.speechSynthesis.speak(wordUtterance);
 }
 
@@ -451,7 +547,7 @@ async function handleListClick(event) {
   }
 
   if (wordButton) {
-    speakWord(wordButton.dataset.wordText, wordButton.dataset.wordLang || "en-US");
+    await speakWord(wordButton.dataset.wordText, wordButton.dataset.wordLang || "en-US");
   }
 }
 

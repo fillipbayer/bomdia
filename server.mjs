@@ -409,6 +409,70 @@ function conciseSummary(value) {
   return sentenceCase(short.replace(/[;:]\s*$/, "").trim());
 }
 
+function improveHeadlineWording(value) {
+  return value
+    .replace(/\bavalia aumentar\b/gi, "estuda elevar")
+    .replace(/\bespera anunciar\b/gi, "se prepara para anunciar")
+    .replace(/\bentra em ranking\b/gi, "ganha destaque em ranking")
+    .replace(/\bgera reações\b/gi, "provoca reações")
+    .replace(/\breage após\b/gi, "reage à")
+    .replace(/\bacredita que\b/gi, "avalia que")
+    .replace(/\btem\b/gi, "registra")
+    .replace(/\binclusão\b/gi, "entrada")
+    .replace(/\blista suja\b/gi, "lista de restrição");
+}
+
+function buildNewsDeck(item) {
+  const cleanedTitle = removeLeadQuote(cleanStoryTitle(item)).replace(/[“”"]/g, "").trim();
+  if (!cleanedTitle) return "Os pontos centrais dessa notícia serão atualizados em seguida.";
+
+  const base = improveHeadlineWording(
+    cleanedTitle
+      .replace(/\s*:\s*/g, ": ")
+      .replace(/\s*—\s*/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+  );
+
+  if (base.includes(":")) {
+    const [lead, tail] = base.split(/:\s+/, 2);
+    if (tail && tail.replace(/["“”']/g, "").trim().length > 24) return conciseSummary(tail);
+    if (lead) return conciseSummary(`A matéria explica ${lead.toLowerCase()}.`);
+  }
+
+  if (/\bfutebol\b|\batleta\b|\bpontas\b|\bcontratado\b/i.test(base)) {
+    return conciseSummary(`Mercado esportivo em foco: ${base}.`);
+  }
+
+  if (/\bgoverno\b|\banatel\b|\bleilão\b|\bgasolina\b|\betanol\b/i.test(base)) {
+    return conciseSummary(`Movimento de política pública: ${base}.`);
+  }
+
+  if (/\bchina\b|\bbyd\b|\btrump\b|\birã\b|\bcessar-fogo\b/i.test(base)) {
+    return conciseSummary(`No exterior, o destaque é que ${base.charAt(0).toLowerCase() + base.slice(1)}.`);
+  }
+
+  if (/\bmuseus?\b|\bcultura\b|\bpicanha\b|\branking\b/i.test(base)) {
+    return conciseSummary(`O destaque cultural de agora: ${base}.`);
+  }
+
+  return conciseSummary(`O ponto central é que ${base.charAt(0).toLowerCase() + base.slice(1)}.`);
+}
+
+function finalizeStorySummary(item) {
+  const title = cleanStoryTitle(item);
+  const summary = conciseSummary(item.summary || "");
+  if (!summary || isWeakSummary(summary) || isGenericSummary(summary) || wordsOverlapRatio(title, summary) > 0.74) {
+    return { ...item, summary: buildNewsDeck(item) };
+  }
+  return { ...item, summary };
+}
+
+function isWeakSummary(summary = "") {
+  const cleaned = String(summary).trim();
+  return cleaned.length < 28 || /^["“'][^"”']+["”']$/.test(cleaned);
+}
+
 function removeLeadQuote(value) {
   return value
     .replace(/^["“][^"”]+["”]\s*:\s*/u, "")
@@ -417,38 +481,7 @@ function removeLeadQuote(value) {
 }
 
 function fallbackSummaryFromTitle(item) {
-  const cleanedTitle = removeLeadQuote(cleanStoryTitle(item)).replace(/[“”"]/g, "").trim();
-  if (!cleanedTitle) return "Resumo rápido indisponível para esta notícia.";
-
-  const base = cleanedTitle
-    .replace(/\s*:\s*/g, ": ")
-    .replace(/\s*—\s*/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  if (base.includes(":")) {
-    const [lead, tail] = base.split(/:\s+/, 2);
-    if (tail) return conciseSummary(`${tail}.`);
-  }
-
-  if (/\bdiz\b|\bafirma\b|\bdeclara\b|\bresponde\b/i.test(base)) {
-    const [statement, speaker] = base.split(/\s*,\s*diz\s+/i);
-    if (statement && speaker) return conciseSummary(`${speaker} comenta que ${statement}.`);
-  }
-
-  if (/\bespera anunciar\b/i.test(base)) {
-    return conciseSummary(base.replace(/\bespera anunciar\b/i, "deve anunciar"));
-  }
-
-  if (/\bdeve\b|\bvai\b|\banuncia\b|\bplaneja\b/i.test(base)) {
-    return conciseSummary(base);
-  }
-
-  if (/\btem\b.+\bentre os\b/i.test(base)) {
-    return conciseSummary(base.replace(/\btem\b/i, "agora tem"));
-  }
-
-  return conciseSummary(base);
+  return buildNewsDeck(item);
 }
 
 function tagValue(block, tag) {
@@ -526,10 +559,10 @@ async function enrichStorySummary(item) {
 
     const html = await response.text();
     const articleSummary = articleSummaryFromHtml(html, item);
-    if (!articleSummary) return { ...item, summary: fallbackSummaryFromTitle(item) };
-    return { ...item, summary: articleSummary };
+    if (!articleSummary) return finalizeStorySummary({ ...item, summary: fallbackSummaryFromTitle(item) });
+    return finalizeStorySummary({ ...item, summary: articleSummary });
   } catch {
-    return { ...item, summary: fallbackSummaryFromTitle(item) };
+    return finalizeStorySummary({ ...item, summary: fallbackSummaryFromTitle(item) });
   }
 }
 
@@ -550,7 +583,7 @@ async function getNews(config, force = false) {
       .slice(0, 3));
   }
 
-  const enriched = dedupeNews(await Promise.all(grouped.map(enrichStorySummary)));
+  const enriched = dedupeNews((await Promise.all(grouped.map(enrichStorySummary))).map(finalizeStorySummary));
 
   newsCache = {
     expiresAt: Date.now() + 15 * 60 * 1000,
@@ -594,6 +627,41 @@ function dedupeNews(items) {
     seen.add(key);
     return true;
   });
+}
+
+function wordVoiceFor(lang) {
+  if (lang === "zh-CN") return "Tingting";
+  if (lang === "zh-TW") return "Meijia";
+  return "Samantha";
+}
+
+async function createWordAudio(text, lang = "en-US") {
+  if (process.platform !== "darwin") return null;
+
+  const normalizedText = String(text || "").trim();
+  if (!normalizedText) return null;
+
+  await mkdir(AUDIO_DIR, { recursive: true });
+  const hash = crypto.createHash("sha1").update(`${lang}:${normalizedText}`).digest("hex");
+  const fileName = `word-${hash}.m4a`;
+  const filePath = join(AUDIO_DIR, fileName);
+
+  try {
+    await stat(filePath);
+    return { url: `/audio/${fileName}`, provider: "macos-word" };
+  } catch {}
+
+  await execFileAsync("/usr/bin/say", [
+    "-v",
+    wordVoiceFor(lang),
+    normalizedText,
+    "-o",
+    filePath,
+    "--file-format=m4af",
+    "--data-format=aac"
+  ], { timeout: 30000 });
+
+  return { url: `/audio/${fileName}`, provider: "macos-word" };
 }
 
 function unfoldIcs(text) {
@@ -999,6 +1067,18 @@ async function handleApi(request, response, url) {
   if (request.method === "GET" && url.pathname === "/api/day") {
     const date = url.searchParams.get("date") || await todayKey();
     sendJson(response, await dayResponse(date));
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/word-audio") {
+    const text = url.searchParams.get("text") || "";
+    const lang = url.searchParams.get("lang") || "en-US";
+    const audio = await createWordAudio(text, lang);
+    if (!audio) {
+      sendText(response, "Word audio unavailable", 503);
+      return;
+    }
+    sendJson(response, audio);
     return;
   }
 
