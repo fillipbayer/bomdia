@@ -76,6 +76,43 @@ function displayTime(isoDate, timeZone = "America/Sao_Paulo") {
   }).format(new Date(isoDate));
 }
 
+function timeGreeting(timeZone = "America/Sao_Paulo") {
+  const hour = Number(new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour: "2-digit",
+    hour12: false
+  }).format(new Date()));
+  if (hour < 12) return "Bom dia";
+  if (hour < 18) return "Boa tarde";
+  return "Boa noite";
+}
+
+function groupNews(items) {
+  const preferred = ["Brasil", "Mundo", "China", "Tech"];
+  const grouped = new Map();
+  for (const item of items) {
+    const category = item.category === "Tecnologia" ? "Tech" : item.category;
+    if (!grouped.has(category)) grouped.set(category, []);
+    grouped.get(category).push({ ...item, category });
+  }
+  const ordered = [
+    ...preferred.filter((category) => grouped.has(category)),
+    ...[...grouped.keys()].filter((category) => !preferred.includes(category))
+  ];
+  return ordered.map((category) => ({ category, items: grouped.get(category) }));
+}
+
+function categoryIcon(category) {
+  return {
+    Brasil: "BR",
+    Mundo: "🌐",
+    China: "中",
+    Tech: "AI",
+    Cultura: "♪",
+    Esportes: "⚑"
+  }[category] || category.slice(0, 2);
+}
+
 async function api(path, options = {}) {
   const response = await fetch(path, {
     headers: { "content-type": "application/json", ...options.headers },
@@ -116,11 +153,14 @@ function render(data) {
   const timeZone = data.timezone || currentSettings?.timezone || "America/Sao_Paulo";
   const audioUrl = day.audio?.url;
 
-  dom.greetingTitle.textContent = data.ownerName ? `Bom dia, ${data.ownerName}` : "Exploring Minds";
+  const greeting = timeGreeting(timeZone);
+  const ownerName = data.ownerName || "Bayer";
+
+  dom.greetingTitle.textContent = `${greeting}, ${ownerName}`;
   dom.todayLabel.textContent = displayDate(day.dateKey, timeZone);
-  dom.briefingTitle.textContent = day.mode === "manual" ? "Update" : "Becoming";
-  dom.briefingTime.textContent = displayTime(day.generatedAt, timeZone);
-  dom.briefingSummary.textContent = day.summary;
+  dom.briefingTitle.textContent = `${displayDate(day.dateKey, timeZone)} · ${displayTime(day.generatedAt, timeZone)}`;
+  dom.briefingTime.textContent = `último ${displayTime(day.generatedAt, timeZone)}`;
+  dom.briefingSummary.textContent = `${day.news.length} notícias curadas · Brasil, Mundo, China e Tech · último boletim às ${displayTime(day.generatedAt, timeZone)}.`;
   dom.briefingScript.textContent = day.script;
   dom.newsCount.textContent = `${day.news.length}`;
   dom.calendarStatus.textContent = data.calendarEnabled ? "iCal" : "manual";
@@ -140,16 +180,29 @@ function render(data) {
     dom.audioHint.textContent = "Sem MP3 ainda. Configure a chave de TTS no ambiente ou use a voz do navegador.";
   }
 
-  dom.newsBoard.innerHTML = day.news.map((item) => `
-    <article class="news-item">
-      <div class="news-meta">
-        <span class="category">${escapeHtml(item.category)}</span>
-        <span class="meta">${escapeHtml(item.source || "RSS")}</span>
+  dom.newsBoard.innerHTML = groupNews(day.news).map((group) => `
+    <section class="news-group">
+      <div class="news-group-heading">
+        <h3>${escapeHtml(group.category)}</h3>
+        <span>${group.items.length}</span>
       </div>
-      <h3>${escapeHtml(item.title)}</h3>
-      <p>${escapeHtml(item.summary)}</p>
-      ${item.url ? `<a href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer">Abrir</a>` : ""}
-    </article>
+      <div class="news-group-list">
+        ${group.items.map((item, index) => `
+          <article class="news-item ${index === 0 ? "is-featured" : ""}">
+            ${item.imageUrl ? `<img src="${escapeHtml(item.imageUrl)}" alt="" loading="lazy">` : `<div class="news-image-fallback news-${escapeHtml(group.category.toLowerCase())}" aria-hidden="true">${escapeHtml(categoryIcon(group.category))}</div>`}
+            <div>
+              <div class="news-meta">
+                <span class="category">${escapeHtml(item.source || "RSS")}</span>
+                <span class="meta">${displayTime(item.publishedAt, timeZone)}</span>
+              </div>
+              <h4>${escapeHtml(item.title)}</h4>
+              <p>${escapeHtml(item.summary)}</p>
+              ${item.url ? `<a href="${escapeHtml(item.url)}" target="_blank" rel="noreferrer">Abrir</a>` : ""}
+            </div>
+          </article>
+        `).join("")}
+      </div>
+    </section>
   `).join("");
 
   dom.wordsBoard.innerHTML = `

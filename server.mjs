@@ -107,7 +107,14 @@ function configFromEnv() {
     };
     config.morningBriefing = Object.fromEntries(Object.entries(config.morningBriefing).filter(([, value]) => value !== undefined));
   }
-  if (process.env.TTS_PROVIDER || process.env.OPENAI_TTS_MODEL || process.env.OPENAI_TTS_VOICE) {
+  if (
+    process.env.TTS_PROVIDER ||
+    process.env.OPENAI_TTS_MODEL ||
+    process.env.OPENAI_TTS_VOICE ||
+    process.env.ELEVENLABS_API_KEY ||
+    process.env.ELEVENLABS_MODEL ||
+    process.env.ELEVENLABS_VOICE_ID
+  ) {
     config.tts = {
       provider: process.env.TTS_PROVIDER,
       openaiModel: process.env.OPENAI_TTS_MODEL,
@@ -307,6 +314,14 @@ function tagValue(block, tag) {
   return stripHtml(match?.[1] || "");
 }
 
+function imageFromBlock(block) {
+  const media = block.match(/<media:(?:content|thumbnail)\b[^>]*url="([^"]+)"/i);
+  const enclosure = block.match(/<enclosure\b[^>]*url="([^"]+)"[^>]*(?:type="image\/[^"]+")?/i);
+  const image = block.match(/<image\b[^>]*>([\s\S]*?)<\/image>/i);
+  const imageUrl = image ? tagValue(image[1], "url") : "";
+  return decodeEntities(media?.[1] || enclosure?.[1] || imageUrl || "");
+}
+
 function sourceFromUrl(url) {
   try {
     return new URL(url).hostname.replace(/^www\./, "");
@@ -328,6 +343,7 @@ function parseFeed(xml, category) {
     const source = tagValue(block, "source") || sourceFromUrl(url);
     const published = tagValue(block, "pubDate") || tagValue(block, "updated") || tagValue(block, "published");
     const publishedDate = published ? new Date(published) : new Date();
+    const imageUrl = imageFromBlock(block);
 
     return {
       id: crypto.createHash("sha1").update(`${category}:${title}:${url}`).digest("hex"),
@@ -335,6 +351,7 @@ function parseFeed(xml, category) {
       title,
       summary: summary || "Sem resumo no feed. Abra a fonte para ler o contexto completo.",
       url,
+      imageUrl,
       source,
       publishedAt: Number.isNaN(publishedDate.valueOf()) ? new Date().toISOString() : publishedDate.toISOString()
     };
@@ -744,6 +761,9 @@ async function handleApi(request, response, url) {
       ttsProvider: config.tts?.provider || "browser",
       ttsModel: config.tts?.openaiModel || null,
       ttsVoice: config.tts?.openaiVoice || null,
+      elevenLabsVoiceId: config.tts?.elevenLabsVoiceId || null,
+      hasElevenLabsKey: Boolean(process.env.ELEVENLABS_API_KEY),
+      hasOpenAiKey: Boolean(process.env.OPENAI_API_KEY),
       calendarEnabled: Boolean(config.calendar?.icalUrl),
       dataDir: DATA_DIR
     });

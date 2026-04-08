@@ -1,5 +1,5 @@
 {
-  "ownerName": "Oto",
+  "ownerName": "Bayer",
   "timezone": "America/Sao_Paulo",
   "interests": [
     "inteligencia artificial",
@@ -17,7 +17,11 @@
       "url": "https://news.google.com/rss/search?q=mundo&hl=pt-BR&gl=BR&ceid=BR:pt-419"
     },
     {
-      "category": "Tecnologia",
+      "category": "China",
+      "url": "https://news.google.com/rss/search?q=China&hl=pt-BR&gl=BR&ceid=BR:pt-419"
+    },
+    {
+      "category": "Tech",
       "url": "https://news.google.com/rss/search?q=tecnologia%20inteligencia%20artificial&hl=pt-BR&gl=BR&ceid=BR:pt-419"
     },
     {

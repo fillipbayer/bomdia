@@ -212,8 +212,8 @@ a {
 
 .hero-card h2 {
   max-width: 660px;
-  font-size: 72px;
-  line-height: 0.9;
+  font-size: 58px;
+  line-height: 0.96;
 }
 
 .briefing-summary {
@@ -348,23 +348,116 @@ a {
 
 .news-board {
   display: grid;
+  gap: 18px;
+}
+
+.news-group {
+  display: grid;
+  gap: 10px;
+}
+
+.news-group-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.news-group-heading h3 {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.news-group-heading span {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  color: var(--dark);
+  background: var(--sun);
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.news-group-list {
+  display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
 .news-item {
   display: grid;
-  min-height: 172px;
-  padding: 14px;
+  grid-template-columns: 116px minmax(0, 1fr);
+  gap: 12px;
+  min-height: 150px;
+  padding: 12px;
   background: var(--surface-soft);
   border: 1px solid var(--line);
   border-radius: var(--radius);
 }
 
-.news-item h3 {
+.news-item.is-featured {
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1fr);
+  min-height: 230px;
+}
+
+.news-item img,
+.news-image-fallback {
+  width: 100%;
+  height: 100%;
+  min-height: 126px;
+  object-fit: cover;
+  background: linear-gradient(135deg, #ffd2e6, #fff05a);
+  border-radius: var(--radius);
+}
+
+.news-image-fallback {
+  display: grid;
+  place-items: center;
+  color: var(--dark);
+  font-size: 32px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.news-brasil {
+  background: linear-gradient(135deg, #c4f7d2, #fff05a);
+}
+
+.news-mundo {
+  background: linear-gradient(135deg, #d8e7ff, #ffffff);
+}
+
+.news-china {
+  color: #ffffff;
+  background: linear-gradient(135deg, #d52b1e, #ffcf40);
+}
+
+.news-tech {
+  background: linear-gradient(135deg, #d8f8ff, #ff8fbd);
+}
+
+.news-cultura {
+  background: linear-gradient(135deg, #ffe4f2, #ffffff);
+}
+
+.news-esportes {
+  background: linear-gradient(135deg, #d8ffe8, #ffffff);
+}
+
+.news-item h4 {
   margin: 8px 0;
   font-size: 18px;
   line-height: 1.24;
+}
+
+.news-item.is-featured h4 {
+  font-size: 26px;
+  line-height: 1.08;
 }
 
 .news-item p,
@@ -376,7 +469,7 @@ a {
 }
 
 .news-item a {
-  align-self: end;
+  display: inline-flex;
   margin-top: 12px;
   color: var(--accent-strong);
   font-weight: 900;
@@ -617,9 +710,14 @@ a {
   }
 
   .dock-panel,
-  .news-board,
+  .news-group-list,
   .history-list,
   .settings-shell {
+    grid-template-columns: 1fr;
+  }
+
+  .news-item,
+  .news-item.is-featured {
     grid-template-columns: 1fr;
   }
 
