@@ -23,6 +23,7 @@ const dom = {
   agendaNextButton: document.querySelector("#agendaNextButton"),
   taskForm: document.querySelector("#taskForm"),
   taskInput: document.querySelector("#taskInput"),
+  clearDoneTasksButton: document.querySelector("#clearDoneTasksButton"),
   newsBoard: document.querySelector("#newsBoard"),
   wordsBoard: document.querySelector("#wordsBoard"),
   historyList: document.querySelector("#historyList"),
@@ -44,6 +45,7 @@ const dom = {
   settingElevenVoiceId: document.querySelector("#settingElevenVoiceId"),
   settingElevenApiKey: document.querySelector("#settingElevenApiKey"),
   settingVoice: document.querySelector("#settingVoice"),
+  settingOpenAiApiKey: document.querySelector("#settingOpenAiApiKey"),
   settingMacosVoice: document.querySelector("#settingMacosVoice")
 };
 
@@ -431,6 +433,8 @@ function populateSettings(settings) {
   dom.settingElevenApiKey.value = "";
   dom.settingElevenApiKey.placeholder = settings.tts?.hasElevenLabsApiKey ? "Chave salva" : "Cole para ativar áudio premium";
   dom.settingVoice.value = settings.tts?.openaiVoice || "marin";
+  dom.settingOpenAiApiKey.value = "";
+  dom.settingOpenAiApiKey.placeholder = settings.tts?.hasOpenAiApiKey ? "Chave salva" : "Cole para ativar áudio premium da OpenAI";
   dom.settingMacosVoice.value = settings.tts?.macosVoice || "Luciana";
 }
 
@@ -460,6 +464,7 @@ function settingsPayload() {
       provider: dom.settingProvider.value || "elevenlabs",
       openaiModel: currentSettings?.tts?.openaiModel || "gpt-4o-mini-tts",
       openaiVoice: dom.settingVoice.value.trim() || "marin",
+      openaiApiKey: dom.settingOpenAiApiKey.value.trim(),
       elevenLabsModel: currentSettings?.tts?.elevenLabsModel || "eleven_multilingual_v2",
       elevenLabsVoiceId: dom.settingElevenVoiceId.value.trim() || "JBFqnCBsd6RMkjVDRZzb",
       elevenLabsApiKey: dom.settingElevenApiKey.value.trim(),
@@ -578,6 +583,18 @@ async function addTask(event) {
   await loadDay(currentDay);
 }
 
+async function clearDoneTasks() {
+  const tasks = currentData?.day?.tasks || [];
+  const doneTasks = tasks.filter((task) => task.done);
+  for (const task of doneTasks) {
+    await api(`/api/tasks/${encodeURIComponent(task.id)}`, {
+      method: "DELETE",
+      body: JSON.stringify({ date: currentDay })
+    });
+  }
+  await loadDay(currentDay);
+}
+
 async function handleListClick(event) {
   const taskButton = event.target.closest("[data-task-id]");
   const historyButton = event.target.closest("[data-day]");
@@ -658,6 +675,7 @@ dom.settingsPanel.addEventListener("click", (event) => {
 });
 dom.wordsBoard.addEventListener("click", (event) => handleListClick(event).catch(handleError));
 dom.taskForm.addEventListener("submit", (event) => addTask(event).catch(handleError));
+dom.clearDoneTasksButton.addEventListener("click", () => clearDoneTasks().catch(handleError));
 dom.agendaList.addEventListener("click", (event) => handleListClick(event).catch(handleError));
 dom.tasksList.addEventListener("click", (event) => handleListClick(event).catch(handleError));
 dom.historyList.addEventListener("click", (event) => handleListClick(event).catch(handleError));

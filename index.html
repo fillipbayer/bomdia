@@ -151,6 +151,7 @@
                 <input id="taskInput" type="text" placeholder="Nova tarefa..." aria-label="Adicionar tarefa">
                 <button type="submit">Add</button>
               </form>
+              <button id="clearDoneTasksButton" class="soft-button full-width-button" type="button">Apagar concluídas</button>
             </section>
           </aside>
         </section>
@@ -232,6 +233,10 @@
           <label>
             <span>Voz OpenAI</span>
             <input id="settingVoice" name="voice" type="text" placeholder="marin">
+          </label>
+          <label>
+            <span>OpenAI API Key</span>
+            <input id="settingOpenAiApiKey" name="openAiApiKey" type="password" placeholder="Cole para ativar o áudio premium da OpenAI">
           </label>
           <label>
             <span>Voz local macOS</span>

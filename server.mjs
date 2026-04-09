@@ -115,6 +115,7 @@ function configFromEnv() {
     process.env.TTS_PROVIDER ||
     process.env.OPENAI_TTS_MODEL ||
     process.env.OPENAI_TTS_VOICE ||
+    process.env.OPENAI_API_KEY ||
     process.env.ELEVENLABS_API_KEY ||
     process.env.ELEVENLABS_MODEL ||
     process.env.ELEVENLABS_VOICE_ID
@@ -123,6 +124,7 @@ function configFromEnv() {
       provider: process.env.TTS_PROVIDER,
       openaiModel: process.env.OPENAI_TTS_MODEL,
       openaiVoice: process.env.OPENAI_TTS_VOICE,
+      openaiApiKey: process.env.OPENAI_API_KEY,
       elevenLabsModel: process.env.ELEVENLABS_MODEL,
       elevenLabsVoiceId: process.env.ELEVENLABS_VOICE_ID,
       macosVoice: process.env.MACOS_TTS_VOICE,
@@ -158,6 +160,7 @@ function publicSettings(config) {
       provider: config.tts?.provider || "browser",
       openaiModel: config.tts?.openaiModel || "",
       openaiVoice: config.tts?.openaiVoice || "",
+      hasOpenAiApiKey: Boolean(process.env.OPENAI_API_KEY || config.tts?.openaiApiKey),
       elevenLabsModel: config.tts?.elevenLabsModel || "eleven_multilingual_v2",
       elevenLabsVoiceId: config.tts?.elevenLabsVoiceId || "",
       macosVoice: config.tts?.macosVoice || "Luciana",
@@ -202,6 +205,7 @@ function normalizeSettings(payload, currentConfig) {
       provider: String(settings.tts?.provider || currentConfig.tts?.provider || "openai").trim(),
       openaiModel: String(settings.tts?.openaiModel || currentConfig.tts?.openaiModel || "gpt-4o-mini-tts").trim(),
       openaiVoice: String(settings.tts?.openaiVoice || currentConfig.tts?.openaiVoice || "marin").trim(),
+      openaiApiKey: String(settings.tts?.openaiApiKey || currentConfig.tts?.openaiApiKey || "").trim(),
       elevenLabsModel: String(settings.tts?.elevenLabsModel || currentConfig.tts?.elevenLabsModel || "eleven_multilingual_v2").trim(),
       elevenLabsVoiceId: String(settings.tts?.elevenLabsVoiceId || currentConfig.tts?.elevenLabsVoiceId || "JBFqnCBsd6RMkjVDRZzb").trim(),
       elevenLabsApiKey: String(settings.tts?.elevenLabsApiKey || currentConfig.tts?.elevenLabsApiKey || "").trim(),
@@ -679,6 +683,47 @@ function parseIcsDate(value) {
   };
 }
 
+function parseRRule(value = "") {
+  return Object.fromEntries(
+    String(value)
+      .split(";")
+      .map((part) => part.split("="))
+      .filter(([key, val]) => key && val)
+  );
+}
+
+function weekdayCode(dateKey) {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const codes = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
+  return codes[new Date(Date.UTC(year, month - 1, day, 12)).getUTCDay()];
+}
+
+function compareDateKeys(left, right) {
+  return left.localeCompare(right);
+}
+
+function occursOnDate(event, dateKey) {
+  if (!event.start) return false;
+  if (event.recurrenceId) return event.recurrenceId.dateKey === dateKey;
+  if (!event.rrule) return event.start.dateKey === dateKey;
+
+  if (compareDateKeys(dateKey, event.start.dateKey) < 0) return false;
+  if (event.until && compareDateKeys(dateKey, event.until.dateKey) > 0) return false;
+  if (event.exdates.has(dateKey)) return false;
+
+  if (event.rrule.FREQ === "WEEKLY") {
+    const byday = (event.rrule.BYDAY || weekdayCode(event.start.dateKey)).split(",");
+    return byday.includes(weekdayCode(dateKey));
+  }
+
+  if (event.rrule.FREQ === "MONTHLY") {
+    const bymonthday = Number(event.rrule.BYMONTHDAY || event.start.dateKey.slice(-2));
+    return Number(dateKey.slice(-2)) === bymonthday;
+  }
+
+  return event.start.dateKey === dateKey;
+}
+
 function icsField(block, name) {
   const match = block.match(new RegExp(`^${name}(?:;[^:]*)?:(.*)$`, "im"));
   return decodeEntities(match?.[1] || "").replace(/\\,/g, ",").replace(/\\n/g, " ").trim();
@@ -686,19 +731,48 @@ function icsField(block, name) {
 
 function parseIcs(text, dateKey) {
   const unfolded = unfoldIcs(text);
-  return [...unfolded.matchAll(/BEGIN:VEVENT([\s\S]*?)END:VEVENT/g)]
+  const events = [...unfolded.matchAll(/BEGIN:VEVENT([\s\S]*?)END:VEVENT/g)]
     .map((match) => match[1])
     .map((block) => {
       const start = parseIcsDate(icsField(block, "DTSTART"));
       if (!start) return null;
+
+      const recurrenceId = parseIcsDate(icsField(block, "RECURRENCE-ID"));
+      const rrule = parseRRule(icsField(block, "RRULE"));
+      const until = parseIcsDate(rrule.UNTIL || "");
+      const exdates = new Set(
+        String(icsField(block, "EXDATE") || "")
+          .split(",")
+          .map((value) => parseIcsDate(value)?.dateKey)
+          .filter(Boolean)
+      );
+
       return {
-        dateKey: start.dateKey,
-        time: start.time,
-        title: icsField(block, "SUMMARY") || "Evento sem titulo"
+        uid: icsField(block, "UID"),
+        start,
+        recurrenceId,
+        rrule: Object.keys(rrule).length ? rrule : null,
+        until,
+        exdates,
+        title: icsField(block, "SUMMARY") || "Evento sem titulo",
+        status: icsField(block, "STATUS"),
+        busyStatus: icsField(block, "X-MICROSOFT-CDO-BUSYSTATUS")
       };
     })
-    .filter((event) => event?.dateKey === dateKey)
-    .map((event) => ({ time: event.time, title: event.title }))
+    .filter(Boolean);
+
+  const exceptions = new Set(
+    events
+      .filter((event) => event.recurrenceId?.dateKey === dateKey)
+      .map((event) => `${event.uid}:${dateKey}`)
+  );
+
+  return events
+    .filter((event) => occursOnDate(event, dateKey))
+    .filter((event) => !(event.rrule && exceptions.has(`${event.uid}:${dateKey}`)))
+    .filter((event) => !/^canceled|^cancelado/i.test(event.title))
+    .filter((event) => event.busyStatus !== "FREE")
+    .map((event) => ({ time: event.start.time, title: event.title }))
     .sort((a, b) => a.time.localeCompare(b.time));
 }
 
@@ -807,13 +881,14 @@ async function createElevenLabsAudio(config, briefing) {
 
 async function createOpenAiAudio(config, briefing) {
   const tts = config.tts || {};
+  const apiKey = process.env.OPENAI_API_KEY || tts.openaiApiKey;
 
-  if (!process.env.OPENAI_API_KEY || !tts.openaiModel) return null;
+  if (!apiKey || !tts.openaiModel) return null;
 
   const response = await fetch("https://api.openai.com/v1/audio/speech", {
     method: "POST",
     headers: {
-      authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      authorization: `Bearer ${apiKey}`,
       "content-type": "application/json"
     },
     body: JSON.stringify({
@@ -1121,6 +1196,21 @@ async function handleApi(request, response, url) {
       return;
     }
     task.done = !task.done;
+    await saveStore(store);
+    sendJson(response, { ok: true });
+    return;
+  }
+
+  if (request.method === "DELETE" && url.pathname.startsWith("/api/tasks/")) {
+    const id = decodeURIComponent(url.pathname.split("/").pop());
+    const body = await readBody(request);
+    const store = await loadStore();
+    const day = store.days[body.date || await todayKey()];
+    if (!day) {
+      sendText(response, "Day not found", 404);
+      return;
+    }
+    day.tasks = (day.tasks || []).filter((item) => item.id !== id);
     await saveStore(store);
     sendJson(response, { ok: true });
     return;
