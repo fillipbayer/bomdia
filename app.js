@@ -19,6 +19,9 @@ const dom = {
   audioHint: document.querySelector("#audioHint"),
   audioTitle: document.querySelector("#audioTitle"),
   agendaList: document.querySelector("#agendaList"),
+  agendaDayLabel: document.querySelector("#agendaDayLabel"),
+  agendaPrevButton: document.querySelector("#agendaPrevButton"),
+  agendaNextButton: document.querySelector("#agendaNextButton"),
   taskForm: document.querySelector("#taskForm"),
   taskInput: document.querySelector("#taskInput"),
   newsBoard: document.querySelector("#newsBoard"),
@@ -53,6 +56,15 @@ let currentSettings;
 let speechUtterance;
 let wordUtterance;
 let wordAudioPlayer = new Audio();
+
+function dateKeyInTimeZone(timeZone = "America/Sao_Paulo", date = new Date()) {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(date);
+}
 
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (char) => ({
@@ -98,6 +110,31 @@ function displayLongDate(dateKey, timeZone = "America/Sao_Paulo") {
     day: "numeric",
     month: "long"
   }).format(new Date(Date.UTC(year, month - 1, day, 12)));
+}
+
+function addDays(dateKey, offset) {
+  const [year, month, day] = dateKey.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day + offset, 12));
+  return date.toISOString().slice(0, 10);
+}
+
+function agendaDayLabel(dateKey, timeZone = "America/Sao_Paulo") {
+  const today = dateKeyInTimeZone(timeZone);
+  if (dateKey === today) return "Hoje";
+  if (dateKey === addDays(today, 1)) return "Amanhã";
+  return displayDate(dateKey, timeZone);
+}
+
+function syncAgendaNavigation(dateKey, timeZone = "America/Sao_Paulo") {
+  const start = dateKeyInTimeZone(timeZone);
+  const days = Array.from({ length: 7 }, (_, index) => addDays(start, index));
+  const position = days.indexOf(dateKey);
+
+  dom.agendaDayLabel.textContent = agendaDayLabel(dateKey, timeZone);
+  dom.agendaPrevButton.disabled = position <= 0;
+  dom.agendaNextButton.disabled = position < 0 || position >= days.length - 1;
+  dom.agendaPrevButton.dataset.targetDay = position > 0 ? days[position - 1] : "";
+  dom.agendaNextButton.dataset.targetDay = position >= 0 && position < days.length - 1 ? days[position + 1] : "";
 }
 
 function timeGreeting(timeZone = "America/Sao_Paulo") {
@@ -303,6 +340,7 @@ function render(data) {
   dom.briefingSummary.textContent = heroDigest(day) || `Resumo do dia atualizado às ${displayTime(day.generatedAt, timeZone)}.`;
   dom.newsCount.textContent = `${day.news.length}`;
   dom.calendarStatus.textContent = data.calendarEnabled ? "iCal" : "manual";
+  syncAgendaNavigation(day.dateKey, timeZone);
   dom.quickNews.textContent = String(day.news.length);
   dom.quickAgenda.textContent = String(day.agenda.length);
   dom.quickTasks.textContent = String(day.tasks.filter((task) => !task.done).length);
@@ -557,6 +595,7 @@ async function handleListClick(event) {
   const taskButton = event.target.closest("[data-task-id]");
   const historyButton = event.target.closest("[data-day]");
   const wordButton = event.target.closest("[data-word-text]");
+  const agendaButton = event.target.closest("[data-target-day]");
 
   if (taskButton) {
     await api(`/api/tasks/${encodeURIComponent(taskButton.dataset.taskId)}`, {
@@ -572,6 +611,10 @@ async function handleListClick(event) {
 
   if (wordButton) {
     await speakWord(wordButton.dataset.wordText, wordButton.dataset.wordLang || "en-US");
+  }
+
+  if (agendaButton?.dataset.targetDay) {
+    await loadDay(agendaButton.dataset.targetDay);
   }
 }
 
@@ -630,6 +673,8 @@ dom.wordsBoard.addEventListener("click", (event) => handleListClick(event).catch
 dom.taskForm.addEventListener("submit", (event) => addTask(event).catch(handleError));
 dom.agendaList.addEventListener("click", (event) => handleListClick(event).catch(handleError));
 dom.historyList.addEventListener("click", (event) => handleListClick(event).catch(handleError));
+dom.agendaPrevButton.addEventListener("click", (event) => handleListClick(event).catch(handleError));
+dom.agendaNextButton.addEventListener("click", (event) => handleListClick(event).catch(handleError));
 
 window.setInterval(() => {
   if (document.visibilityState === "visible" && currentDay) {

@@ -133,7 +133,18 @@
                   <p class="eyebrow">Today</p>
                   <h2 id="focusTitle">Agenda</h2>
                 </div>
-                <span id="calendarStatus" class="status-chip">manual</span>
+                <div class="focus-toolbar">
+                  <div class="agenda-nav" aria-label="Navegar dias da agenda">
+                    <button id="agendaPrevButton" class="icon-button light" type="button" aria-label="Dia anterior">
+                      <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg>
+                    </button>
+                    <span id="agendaDayLabel" class="status-chip">Hoje</span>
+                    <button id="agendaNextButton" class="icon-button light" type="button" aria-label="Próximo dia">
+                      <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>
+                    </button>
+                  </div>
+                  <span id="calendarStatus" class="status-chip">manual</span>
+                </div>
               </div>
               <ul id="agendaList" class="stack-list"></ul>
               <form id="taskForm" class="ask-bar">
