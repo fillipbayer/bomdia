@@ -348,8 +348,8 @@ function render(data) {
         <h3>${escapeHtml(group.category)}</h3>
       </div>
       <div class="news-group-list">
-        ${group.items.map((item, index) => `
-          <article class="news-item ${index === 0 ? "is-featured" : ""}">
+        ${group.items.map((item) => `
+          <article class="news-item">
             <div class="news-icon news-${escapeHtml(group.category.toLowerCase())}" aria-hidden="true">${categoryIcon(group.category)}</div>
             <div class="news-copy">
               <div class="news-meta">
