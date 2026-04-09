@@ -17,6 +17,7 @@ const dom = {
   audioHint: document.querySelector("#audioHint"),
   audioTitle: document.querySelector("#audioTitle"),
   agendaList: document.querySelector("#agendaList"),
+  tasksList: document.querySelector("#tasksList"),
   agendaDayLabel: document.querySelector("#agendaDayLabel"),
   agendaPrevButton: document.querySelector("#agendaPrevButton"),
   agendaNextButton: document.querySelector("#agendaNextButton"),
@@ -391,20 +392,23 @@ function render(data) {
     </article>
   `;
 
-  dom.agendaList.innerHTML = [
-    ...day.agenda.map((item) => `
+  dom.agendaList.innerHTML = day.agenda.length
+    ? day.agenda.map((item) => `
       <li class="agenda-item">
         <time>${escapeHtml(item.time)}</time>
         <span>${escapeHtml(item.title)}</span>
       </li>
-    `),
-    ...day.tasks.map((task) => `
+    `).join("")
+    : '<li class="empty-item">Sem eventos para este dia.</li>';
+
+  dom.tasksList.innerHTML = day.tasks.length
+    ? day.tasks.map((task) => `
       <li class="task-item ${task.done ? "is-done" : ""}">
         <span>${escapeHtml(task.title)}</span>
         <button type="button" data-task-id="${escapeHtml(task.id)}">${task.done ? "Reabrir" : "Ok"}</button>
       </li>
-    `)
-  ].join("");
+    `).join("")
+    : '<li class="empty-item">Nenhuma tarefa por aqui.</li>';
 
   dom.historyList.innerHTML = history.map((item) => `
     <button class="history-item" type="button" data-day="${escapeHtml(item.dateKey)}">
@@ -657,6 +661,7 @@ dom.settingsPanel.addEventListener("click", (event) => {
 dom.wordsBoard.addEventListener("click", (event) => handleListClick(event).catch(handleError));
 dom.taskForm.addEventListener("submit", (event) => addTask(event).catch(handleError));
 dom.agendaList.addEventListener("click", (event) => handleListClick(event).catch(handleError));
+dom.tasksList.addEventListener("click", (event) => handleListClick(event).catch(handleError));
 dom.historyList.addEventListener("click", (event) => handleListClick(event).catch(handleError));
 dom.agendaPrevButton.addEventListener("click", (event) => handleListClick(event).catch(handleError));
 dom.agendaNextButton.addEventListener("click", (event) => handleListClick(event).catch(handleError));
