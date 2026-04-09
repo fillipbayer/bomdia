@@ -26,7 +26,6 @@ const dom = {
   newsBoard: document.querySelector("#newsBoard"),
   wordsBoard: document.querySelector("#wordsBoard"),
   historyList: document.querySelector("#historyList"),
-  calendarStatus: document.querySelector("#calendarStatus"),
   quickNews: document.querySelector("#quickNews"),
   quickAgenda: document.querySelector("#quickAgenda"),
   quickTasks: document.querySelector("#quickTasks"),
@@ -326,7 +325,6 @@ function render(data) {
     ? "notícias, agenda e tarefas ligadas ao Outlook"
     : "notícias, agenda e tarefas num só painel";
   dom.briefingSummary.textContent = heroDigest(day) || `Resumo do dia atualizado às ${displayTime(day.generatedAt, timeZone)}.`;
-  dom.calendarStatus.textContent = data.calendarEnabled ? "iCal" : "manual";
   syncAgendaNavigation(day.dateKey, timeZone);
   dom.quickNews.textContent = String(day.news.length);
   dom.quickAgenda.textContent = String(day.agenda.length);
