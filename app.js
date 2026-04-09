@@ -1,8 +1,10 @@
 const dom = {
   greetingTitle: document.querySelector("#greetingTitle"),
   heroDate: document.querySelector("#heroDate"),
+  heroMode: document.querySelector("#heroMode"),
   briefingTitle: document.querySelector("#briefingTitle"),
   briefingTime: document.querySelector("#briefingTime"),
+  audioStamp: document.querySelector("#audioStamp"),
   briefingSummary: document.querySelector("#briefingSummary"),
   briefingScript: document.querySelector("#briefingScript"),
   playButton: document.querySelector("#playButton"),
@@ -138,8 +140,8 @@ function categoryIcon(category) {
 
 function shortSummary(value) {
   const text = String(value || "").replace(/\s+/g, " ").trim();
-  if (text.length <= 110) return text;
-  return `${text.slice(0, 107).trim()}...`;
+  if (text.length <= 180) return text;
+  return `${text.slice(0, 177).trim()}...`;
 }
 
 function normalizedText(value) {
@@ -218,6 +220,29 @@ function heroDigest(day) {
   return highlights.join(" ");
 }
 
+function headlineForDay(day) {
+  const categories = groupNews(day.news).map((group) => group.category).slice(0, 3);
+  const lead = day.news[0];
+  const title = String(lead?.title || "")
+    .replace(/\s+-\s+[^-]+$/, "")
+    .replace(/^["“][^"”]+["”]\s*:\s*/u, "")
+    .trim();
+
+  if (/museu|cultura|ranking|filme|arte|show|picanha/i.test(title)) {
+    return "Cultura, consumo e mundo puxam o dia";
+  }
+  if (/china|trump|uerra|cessar|mercado|investimento|gasolina|etanol/i.test(title)) {
+    return "Mercado e exterior dão o tom do dia";
+  }
+  if (categories.length >= 3) {
+    return `${categories[0]}, ${categories[1].toLowerCase()} e ${categories[2].toLowerCase()} no radar`;
+  }
+  if (categories.length === 2) {
+    return `${categories[0]} e ${categories[1].toLowerCase()} em destaque`;
+  }
+  return "Seu radar essencial";
+}
+
 function formatDuration(value) {
   if (!Number.isFinite(value)) return "0:00";
   const minutes = Math.floor(value / 60);
@@ -270,8 +295,12 @@ function render(data) {
 
   dom.greetingTitle.textContent = `${greeting}, ${ownerName}`;
   dom.heroDate.textContent = displayDate(day.dateKey, timeZone);
-  dom.briefingTitle.textContent = "Seu radar essencial";
+  dom.briefingTitle.textContent = headlineForDay(day);
   dom.briefingTime.textContent = `último ${displayTime(day.generatedAt, timeZone)}`;
+  dom.audioStamp.textContent = `áudio ${audioUrl ? "pronto" : "sob demanda"}`;
+  dom.heroMode.textContent = data.calendarEnabled
+    ? "notícias, agenda e tarefas ligadas ao Outlook"
+    : "notícias, agenda e tarefas num só painel";
   dom.briefingSummary.textContent = heroDigest(day) || `Resumo do dia atualizado às ${displayTime(day.generatedAt, timeZone)}.`;
   dom.briefingScript.textContent = day.script;
   dom.newsCount.textContent = `${day.news.length}`;
