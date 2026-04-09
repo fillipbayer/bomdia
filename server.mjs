@@ -884,10 +884,7 @@ async function createBriefing({ dateKey, mode, store, config, forceNews }) {
   const news = newsResult.items.length ? newsResult.items : fallbackNews(config);
   const words = wordOfDay(dateKey);
   const { agenda, enabled: calendarEnabled } = await getAgenda(config, dateKey);
-  const previousTasks = store.days[dateKey]?.tasks || [
-    { id: crypto.randomUUID(), title: "Ler boletim do dia", done: false },
-    { id: crypto.randomUUID(), title: "Separar 20 minutos para estudo", done: false }
-  ];
+  const previousTasks = (store.days[dateKey]?.tasks || []).filter((task) => !isLegacySeedTask(task));
   const generatedAt = new Date().toISOString();
   const briefing = {
     id: crypto.randomUUID(),
@@ -910,6 +907,13 @@ async function createBriefing({ dateKey, mode, store, config, forceNews }) {
   store.days[dateKey] = briefing;
 
   return { briefing, online: newsResult.online, calendarEnabled };
+}
+
+function isLegacySeedTask(task) {
+  return [
+    "Ler boletim do dia",
+    "Separar 20 minutos para estudo"
+  ].includes(String(task?.title || "").trim());
 }
 
 function historyFromStore(store) {

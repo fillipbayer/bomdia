@@ -1,15 +1,14 @@
 const dom = {
   greetingTitle: document.querySelector("#greetingTitle"),
+  currentTime: document.querySelector("#currentTime"),
   heroDate: document.querySelector("#heroDate"),
   heroMode: document.querySelector("#heroMode"),
   briefingTitle: document.querySelector("#briefingTitle"),
   briefingTime: document.querySelector("#briefingTime"),
   audioStamp: document.querySelector("#audioStamp"),
   briefingSummary: document.querySelector("#briefingSummary"),
-  briefingScript: document.querySelector("#briefingScript"),
   playButton: document.querySelector("#playButton"),
   stopButton: document.querySelector("#stopButton"),
-  generateButton: document.querySelector("#generateButton"),
   refreshButton: document.querySelector("#refreshButton"),
   settingsButton: document.querySelector("#settingsButton"),
   audioPlayer: document.querySelector("#audioPlayer"),
@@ -19,13 +18,10 @@ const dom = {
   playerDuration: document.querySelector("#playerDuration"),
   audioHint: document.querySelector("#audioHint"),
   audioTitle: document.querySelector("#audioTitle"),
-  installButton: document.querySelector("#installButton"),
   agendaList: document.querySelector("#agendaList"),
   taskForm: document.querySelector("#taskForm"),
   taskInput: document.querySelector("#taskInput"),
   newsBoard: document.querySelector("#newsBoard"),
-  newsViewLink: document.querySelector("#newsViewLink"),
-  newsViewLabel: document.querySelector("#newsViewLabel"),
   wordsBoard: document.querySelector("#wordsBoard"),
   historyList: document.querySelector("#historyList"),
   newsCount: document.querySelector("#newsCount"),
@@ -51,17 +47,12 @@ const dom = {
   settingMacosVoice: document.querySelector("#settingMacosVoice")
 };
 
-let deferredInstallPrompt;
 let currentDay;
 let currentData;
 let currentSettings;
 let speechUtterance;
 let wordUtterance;
 let wordAudioPlayer = new Audio();
-
-function currentView() {
-  return new URLSearchParams(window.location.search).get("view") === "news" ? "news" : "daily";
-}
 
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (char) => ({
@@ -89,6 +80,14 @@ function displayTime(isoDate, timeZone = "America/Sao_Paulo") {
     hour: "2-digit",
     minute: "2-digit"
   }).format(new Date(isoDate));
+}
+
+function displayClock(timeZone = "America/Sao_Paulo") {
+  return new Intl.DateTimeFormat("pt-BR", {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit"
+  }).format(new Date());
 }
 
 function displayLongDate(dateKey, timeZone = "America/Sao_Paulo") {
@@ -140,8 +139,8 @@ function categoryIcon(category) {
 
 function shortSummary(value) {
   const text = String(value || "").replace(/\s+/g, " ").trim();
-  if (text.length <= 180) return text;
-  return `${text.slice(0, 177).trim()}...`;
+  if (text.length <= 240) return text;
+  return `${text.slice(0, 237).trim()}...`;
 }
 
 function normalizedText(value) {
@@ -177,15 +176,15 @@ function fallbackCardSummary(item) {
   if (title.includes(":")) {
     const [lead, tail] = title.split(/:\s+/, 2);
     if (tail && tail.length > 24) return shortSummary(tail);
-    if (lead) return shortSummary(`A matéria explica ${lead.toLowerCase()}.`);
+    if (lead) return shortSummary(`Agora: ${lead.toLowerCase()}.`);
   }
 
   if (/\bfutebol\b|\batleta\b|\bpontas\b|\bcontratado\b/i.test(title)) {
-    return shortSummary(`Mercado esportivo em foco: ${title}.`);
+    return shortSummary(`No esporte, o destaque é ${title}.`);
   }
 
   if (/\bgoverno\b|\banatel\b|\bleilão\b|\bgasolina\b|\betanol\b/i.test(title)) {
-    return shortSummary(`Movimento de política pública: ${title.replace(/\bavalia aumentar\b/i, "estuda elevar")}.`);
+    return shortSummary(`Em Brasília, o movimento do dia é ${title.replace(/\bavalia aumentar\b/i, "estuda elevar")}.`);
   }
 
   if (/\bchina\b|\bbyd\b|\btrump\b|\birã\b|\bcessar-fogo\b/i.test(title)) {
@@ -196,7 +195,7 @@ function fallbackCardSummary(item) {
     return shortSummary(`O destaque cultural de agora: ${title.replace(/\btem\b/i, "registra").replace(/\bentra em ranking\b/i, "ganha destaque em ranking")}.`);
   }
 
-  return shortSummary(`O ponto central é que ${title.charAt(0).toLowerCase() + title.slice(1)}.`);
+  return shortSummary(`Em destaque: ${title.charAt(0).toLowerCase() + title.slice(1)}.`);
 }
 
 function newsSummaryForCard(item) {
@@ -291,37 +290,33 @@ function render(data) {
 
   const greeting = timeGreeting(timeZone);
   const ownerName = data.ownerName || "Bayer";
-  const view = currentView();
 
   dom.greetingTitle.textContent = `${greeting}, ${ownerName}`;
+  dom.currentTime.textContent = displayClock(timeZone);
   dom.heroDate.textContent = displayDate(day.dateKey, timeZone);
   dom.briefingTitle.textContent = headlineForDay(day);
   dom.briefingTime.textContent = `último ${displayTime(day.generatedAt, timeZone)}`;
-  dom.audioStamp.textContent = `áudio ${audioUrl ? "pronto" : "sob demanda"}`;
+  dom.audioStamp.textContent = audioUrl ? `último áudio ${displayTime(day.generatedAt, timeZone)}` : "gere quando quiser";
   dom.heroMode.textContent = data.calendarEnabled
     ? "notícias, agenda e tarefas ligadas ao Outlook"
     : "notícias, agenda e tarefas num só painel";
   dom.briefingSummary.textContent = heroDigest(day) || `Resumo do dia atualizado às ${displayTime(day.generatedAt, timeZone)}.`;
-  dom.briefingScript.textContent = day.script;
   dom.newsCount.textContent = `${day.news.length}`;
   dom.calendarStatus.textContent = data.calendarEnabled ? "iCal" : "manual";
   dom.quickNews.textContent = String(day.news.length);
   dom.quickAgenda.textContent = String(day.agenda.length);
   dom.quickTasks.textContent = String(day.tasks.filter((task) => !task.done).length);
   dom.quickAudio.textContent = audioUrl ? "pronto" : "web";
-  dom.newsViewLink.href = view === "news" ? "./" : "?view=news";
-  dom.newsViewLabel.textContent = view === "news" ? "voltar ao daily" : "somente notícias";
-  document.body.dataset.view = view;
 
   dom.audioPlayer.hidden = !audioUrl;
   if (audioUrl) {
     dom.audioPlayer.src = audioUrl;
-    dom.audioTitle.textContent = "Podcast pronto";
-    dom.audioHint.textContent = `Arquivo gerado por ${day.audio.provider}. Use o player para pausar, avançar e retomar.`;
+    dom.audioTitle.textContent = "Boletim em áudio";
+    dom.audioHint.textContent = "Toque, pause e retome quando quiser.";
   } else {
     dom.audioPlayer.removeAttribute("src");
-    dom.audioTitle.textContent = "Podcast";
-    dom.audioHint.textContent = "Sem MP3 ainda. Configure a chave de TTS no ambiente ou use a voz do navegador.";
+    dom.audioTitle.textContent = "Boletim em áudio";
+    dom.audioHint.textContent = "Atualize o board para gerar uma nova versão em áudio.";
   }
 
   dom.newsBoard.innerHTML = groupNews(day.news).map((group) => `
@@ -584,22 +579,7 @@ function handleError(error) {
   console.error(error);
   setStatus("erro", true);
   dom.briefingSummary.textContent = "Não consegui carregar o painel.";
-  dom.briefingScript.textContent = String(error.message || error);
 }
-
-window.addEventListener("beforeinstallprompt", (event) => {
-  event.preventDefault();
-  deferredInstallPrompt = event;
-  dom.installButton.hidden = false;
-});
-
-dom.installButton.addEventListener("click", async () => {
-  if (!deferredInstallPrompt) return;
-  deferredInstallPrompt.prompt();
-  await deferredInstallPrompt.userChoice;
-  deferredInstallPrompt = null;
-  dom.installButton.hidden = true;
-});
 
 function updatePlayerIcon(isPlaying) {
   dom.playerPlayButton.innerHTML = isPlaying
@@ -640,8 +620,7 @@ dom.audioPlayer.addEventListener("play", () => updatePlayerIcon(true));
 dom.audioPlayer.addEventListener("pause", () => updatePlayerIcon(false));
 dom.audioPlayer.addEventListener("ended", () => updatePlayerIcon(false));
 dom.stopButton.addEventListener("click", stopAudio);
-dom.generateButton.addEventListener("click", () => generateBriefing("manual").catch(handleError));
-dom.refreshButton.addEventListener("click", () => loadDay(currentDay).catch(handleError));
+dom.refreshButton.addEventListener("click", () => generateBriefing("manual").catch(handleError));
 dom.settingsButton.addEventListener("click", openSettings);
 dom.settingsForm.addEventListener("submit", (event) => saveSettings(event).catch(handleError));
 dom.settingsPanel.addEventListener("click", (event) => {
@@ -657,6 +636,11 @@ window.setInterval(() => {
     loadDay(currentDay).catch(handleError);
   }
 }, 30 * 60 * 1000);
+
+window.setInterval(() => {
+  const timeZone = currentData?.timezone || currentSettings?.timezone || "America/Sao_Paulo";
+  if (dom.currentTime) dom.currentTime.textContent = displayClock(timeZone);
+}, 60 * 1000);
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js");
