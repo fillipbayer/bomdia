@@ -1,10 +1,8 @@
 const dom = {
   greetingTitle: document.querySelector("#greetingTitle"),
-  currentTime: document.querySelector("#currentTime"),
   heroDate: document.querySelector("#heroDate"),
   heroMode: document.querySelector("#heroMode"),
   briefingTitle: document.querySelector("#briefingTitle"),
-  briefingTime: document.querySelector("#briefingTime"),
   audioStamp: document.querySelector("#audioStamp"),
   briefingSummary: document.querySelector("#briefingSummary"),
   playButton: document.querySelector("#playButton"),
@@ -91,14 +89,6 @@ function displayTime(isoDate, timeZone = "America/Sao_Paulo") {
     hour: "2-digit",
     minute: "2-digit"
   }).format(new Date(isoDate));
-}
-
-function displayClock(timeZone = "America/Sao_Paulo") {
-  return new Intl.DateTimeFormat("pt-BR", {
-    timeZone,
-    hour: "2-digit",
-    minute: "2-digit"
-  }).format(new Date());
 }
 
 function displayLongDate(dateKey, timeZone = "America/Sao_Paulo") {
@@ -328,10 +318,8 @@ function render(data) {
   const ownerName = data.ownerName || "Bayer";
 
   dom.greetingTitle.textContent = `${greeting}, ${ownerName}`;
-  dom.currentTime.textContent = displayClock(timeZone);
   dom.heroDate.textContent = displayDate(day.dateKey, timeZone);
   dom.briefingTitle.textContent = headlineForDay(day);
-  dom.briefingTime.textContent = `último ${displayTime(day.generatedAt, timeZone)}`;
   dom.audioStamp.textContent = audioUrl ? `último áudio ${displayTime(day.generatedAt, timeZone)}` : "gere quando quiser";
   dom.heroMode.textContent = data.calendarEnabled
     ? "notícias, agenda e tarefas ligadas ao Outlook"
@@ -679,10 +667,6 @@ window.setInterval(() => {
   }
 }, 30 * 60 * 1000);
 
-window.setInterval(() => {
-  const timeZone = currentData?.timezone || currentSettings?.timezone || "America/Sao_Paulo";
-  if (dom.currentTime) dom.currentTime.textContent = displayClock(timeZone);
-}, 60 * 1000);
 
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("./sw.js");
