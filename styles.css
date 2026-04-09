@@ -492,7 +492,7 @@ a {
   background: #ffffff;
   border: 0;
   border-radius: var(--radius);
-  box-shadow: none;
+  box-shadow: var(--shadow-soft);
 }
 
 .news-icon {
