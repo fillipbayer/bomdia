@@ -50,27 +50,28 @@
               <span id="heroMode" class="hero-footnote">briefing vivo ao longo do dia</span>
             </div>
           </div>
-          <aside class="dock-panel hero-dock" aria-label="Resumo rápido">
-            <article class="dock-item">
-              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h9"/></svg>
-              <span id="quickNews">0</span>
-              <small>notícias</small>
-            </article>
-            <article class="dock-item">
-              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M8 4v3M16 4v3M5 9h14"/><path d="M6 6h12a1 1 0 0 1 1 1v11H5V7a1 1 0 0 1 1-1Z"/></svg>
-              <span id="quickAgenda">0</span>
-              <small>agenda</small>
-            </article>
-            <article class="dock-item">
-              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6 12 4 4 8-8"/></svg>
-              <span id="quickTasks">0</span>
-              <small>tarefas</small>
-            </article>
-            <article class="dock-item">
-              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 18V8M12 18V5M18 18v-8"/></svg>
-              <span id="quickAudio">web</span>
-              <small>áudio</small>
-            </article>
+          <aside class="panel audio-panel hero-audio" aria-label="Podcast">
+            <div class="panel-heading">
+              <div>
+                <h2 id="audioTitle">Boletim em áudio</h2>
+              </div>
+              <span id="audioStamp" class="status-chip"></span>
+            </div>
+            <div class="waveform" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+            <div class="player-card">
+              <button id="playerPlayButton" class="icon-button light" type="button" aria-label="Tocar áudio">
+                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M8 5v14l11-7Z"/></svg>
+              </button>
+              <div class="player-main">
+                <input id="playerSeek" type="range" min="0" max="100" value="0" step="0.1" aria-label="Progresso do áudio">
+                <div class="player-times">
+                  <span id="playerCurrent">0:00</span>
+                  <span id="playerDuration">0:00</span>
+                </div>
+              </div>
+            </div>
+            <p id="audioHint">Toque para ouvir o boletim quando quiser.</p>
+            <audio id="audioPlayer" hidden></audio>
           </aside>
         </section>
 
@@ -95,28 +96,27 @@
           </section>
 
           <aside class="right-rail">
-            <section class="panel audio-panel" aria-label="Podcast">
-              <div class="panel-heading">
-                <div>
-              <h2 id="audioTitle">Boletim em áudio</h2>
-            </div>
-            <span id="audioStamp" class="status-chip"></span>
-          </div>
-          <div class="waveform" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
-          <div class="player-card">
-            <button id="playerPlayButton" class="icon-button light" type="button" aria-label="Tocar áudio">
-              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M8 5v14l11-7Z"/></svg>
-            </button>
-            <div class="player-main">
-              <input id="playerSeek" type="range" min="0" max="100" value="0" step="0.1" aria-label="Progresso do áudio">
-              <div class="player-times">
-                <span id="playerCurrent">0:00</span>
-                <span id="playerDuration">0:00</span>
-              </div>
-            </div>
-          </div>
-          <p id="audioHint">Toque para ouvir o boletim quando quiser.</p>
-          <audio id="audioPlayer" hidden></audio>
+            <section class="dock-panel" aria-label="Resumo rápido">
+              <article class="dock-item">
+                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h9"/></svg>
+                <span id="quickNews">0</span>
+                <small>notícias</small>
+              </article>
+              <article class="dock-item">
+                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M8 4v3M16 4v3M5 9h14"/><path d="M6 6h12a1 1 0 0 1 1 1v11H5V7a1 1 0 0 1 1-1Z"/></svg>
+                <span id="quickAgenda">0</span>
+                <small>agenda</small>
+              </article>
+              <article class="dock-item">
+                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m6 12 4 4 8-8"/></svg>
+                <span id="quickTasks">0</span>
+                <small>tarefas</small>
+              </article>
+              <article class="dock-item">
+                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 18V8M12 18V5M18 18v-8"/></svg>
+                <span id="quickAudio">web</span>
+                <small>áudio</small>
+              </article>
             </section>
 
             <section class="panel focus-panel" aria-labelledby="focusTitle">

@@ -211,9 +211,10 @@ a {
   overflow: hidden;
 }
 
-.hero-dock {
+.hero-audio {
   align-self: center;
-  box-shadow: none;
+  background: rgb(255 255 255 / 72%);
+  border: 1px solid rgb(255 255 255 / 82%);
 }
 
 .hero-copy {
@@ -376,6 +377,10 @@ a {
   padding: 10px;
   background: var(--dark);
   border: 1px solid #201d25;
+}
+
+.right-rail > .dock-panel {
+  box-shadow: var(--shadow);
 }
 
 .dock-item {
@@ -944,6 +949,10 @@ a {
 
   .right-rail {
     grid-template-columns: 1fr;
+  }
+
+  .hero-audio {
+    order: 2;
   }
 
   .focus-toolbar {
